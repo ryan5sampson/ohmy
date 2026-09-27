@@ -15,7 +15,7 @@
 :root {
   --bg: #EEF1EC; --ink: #13201A; --muted: #5B685F; --card: #FFFFFF; --cell: #E2E7E1;
   --edge: #C8D0C9; --wire: #13201A; --mine: #1D5BD6; --meas: #A34E00; --wrong: #C8321F;
-  --sel: #FFD23F; --target: #CFDDFB; --live: #F2A900; --key: #DAE0D9; --body: #D9C49A;
+  --sel: #FFD23F; --target: #CFDDFB; --live: #F2A900; --key: #DAE0D9; --body: #EADFC6;
   --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
   --text: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --num: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
@@ -25,14 +25,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0B1F17; --ink: #E6EDE4; --muted: #8FA396; --card: #10291D; --cell: #1A3D2A;
     --edge: #24503A; --wire: #C8894F; --mine: #8DB4FF; --meas: #F0A15A; --wrong: #FF7A66;
-    --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #BFA878;
+    --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #D8C9A6;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0B1F17; --ink: #E6EDE4; --muted: #8FA396; --card: #10291D; --cell: #1A3D2A;
   --edge: #24503A; --wire: #C8894F; --mine: #8DB4FF; --meas: #F0A15A; --wrong: #FF7A66;
-  --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #BFA878;
+  --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #D8C9A6;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -59,7 +59,7 @@ button:disabled { cursor: default; opacity: .4; }
 .rpane p { margin: 0; }
 #rushPlay { align-content: stretch; grid-template-rows: auto 1fr auto auto; }
 .rsvg { width: 100%; max-width: 360px; margin: 0 auto; display: block; }
-.rsvg .slot0 { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.rsvg .slot0 { fill: none; stroke: #000; stroke-opacity: .5; stroke-width: 1.5; stroke-dasharray: 3 3; }
 .rstat { display: flex; justify-content: space-between; font: 700 34px/1 var(--num); font-variant-numeric: tabular-nums; }
 .rstat #rTime.low { color: var(--wrong); }
 .rstat #rScore::after { content: ' pts'; font-size: 16px; color: var(--muted); }
@@ -71,9 +71,9 @@ button:disabled { cursor: default; opacity: .4; }
 .rans { font: 700 32px var(--num); text-align: center; min-height: 1.2em; }
 .tols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .tols button { height: 40px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 16px var(--num); display: flex; align-items: center; justify-content: center; gap: 6px; }
-.tols button i { width: 10px; height: 22px; border-radius: 2px; }
+.tols button i { width: 10px; height: 22px; border-radius: 2px; border: 1px solid rgb(0 0 0 / .55); }
 .tols [aria-pressed="true"] { border-color: var(--ink); background: var(--sel); }
-#rPad .sw { font: 700 18px var(--num); border: 1px solid var(--edge); }
+#rPad .sw { border: 2px solid var(--muted); }
 #rPad .enter { grid-column: span 2; background: var(--ink); color: var(--bg); font: 600 17px var(--display); }
 #rPad .wide3 { grid-column: span 3; }
 .rbig { font: 700 64px/1 var(--num); text-align: center; }
@@ -181,6 +181,8 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .lbl { font: 700 13px var(--display); fill: var(--ink); }
 .sym { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 .res { fill: var(--body); }
+.band { stroke: #000; stroke-opacity: .55; stroke-width: 1; }
+.rsvg .band { stroke-width: 1.5; }
 .bands { display: none; }
 .card.known .bands { display: inline; }
 .cell rect { fill: var(--cell); }
@@ -195,6 +197,8 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .cell.given .val { fill: var(--ink); }
 .cell.meas .val { fill: var(--meas); }
 .cell.sel rect { fill: var(--sel); }
+.cell.sel .val, .note.sel .val { fill: var(--ink); }
+.cell.sel .u, .note.sel .nl { fill: var(--ink); opacity: .7; }
 .cell.target rect { fill: var(--target); }
 .cell.wrong rect { fill: color-mix(in srgb, var(--wrong) 22%, var(--cell)); }
 .cell.wrong .val { fill: var(--wrong); text-decoration: line-through; }
@@ -280,7 +284,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 <main id="home">
   <header class="brand">
     <button class="rushBtn" id="rushBtn" aria-label="Resistor Rush">
-      <svg viewBox="0 0 48 20" aria-hidden="true"><path d="M1 10h9M38 10h9" class="lead"/><rect x="9" y="3" width="30" height="14" rx="6" class="rbody"/><rect x="14" y="3" width="3.5" height="14" fill="#f2cc0c"/><rect x="20" y="3" width="3.5" height="14" fill="#8a3fc2"/><rect x="26" y="3" width="3.5" height="14" fill="#d7261e"/><rect x="33" y="3" width="3.5" height="14" fill="#c9a227"/></svg>
+      <svg viewBox="0 0 48 20" aria-hidden="true"><path d="M1 10h9M38 10h9" class="lead"/><rect x="9" y="3" width="30" height="14" rx="6" class="rbody"/><rect x="14" y="3" width="3.5" height="14" fill="#f2cc0c" class="band"/><rect x="20" y="3" width="3.5" height="14" fill="#8a3fc2" class="band"/><rect x="26" y="3" width="3.5" height="14" fill="#d7261e" class="band"/><rect x="33" y="3" width="3.5" height="14" fill="#c9a227" class="band"/></svg>
       <span>Rush</span>
     </button>
     <h1>Ohm<span>y</span></h1>
@@ -666,7 +670,7 @@ function card(part, x, y, qs, i, R, demo) {
     s += `<path class="sym" d="M6 12h4l2-5 3 10 3-10 3 10 2-5h4"/><text class="lbl" x="34" y="16">${part}</text>`;
     const b = bands(R);
     if (b) s += `<g class="bands" transform="translate(${CW - 70} 3)"><path class="sym" d="M0 7h8M56 7h8"/><rect class="res" x="7" y="0" width="50" height="14" rx="5"/>` +
-      b.map((c, j) => `<rect x="${14 + j * 8}" y="0" width="5" height="14" fill="${c}"/>`).join('') + `<rect x="46" y="0" width="5" height="14" fill="#c9a227"/></g>`;
+      b.map((c, j) => `<rect class="band" x="${13 + j * 8}" y="0.5" width="6" height="13" fill="${c}"/>`).join('') + `<rect class="band" x="45" y="0.5" width="6" height="13" fill="#c9a227"/></g>`;
   }
   qs.forEach((q, j) => {
     const id = `${part}.${q}`, d = demo ? demo[id] || '' : '';
@@ -1195,7 +1199,6 @@ const GOLD = '#c9a227', SILVER = '#b8b8b8';
 const COLOR_NAMES = ['black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray', 'white'];
 const TOL = { 1: BAND[1], 2: BAND[2], 5: GOLD, 10: SILVER }; // tolerance % -> band color
 const multColor = m => m === -1 ? GOLD : m === -2 ? SILVER : BAND[m];
-const darkInk = c => ['#1a1a1a', '#7a4a1e', '#d7261e', '#2f5fd0', '#8a3fc2', '#8c8c8c'].includes(c);
 const ohms = v => v >= 1e6 ? `${+(v / 1e6).toFixed(3)} MΩ` : v >= 1e3 ? `${+(v / 1e3).toFixed(3)} kΩ` : `${+v.toFixed(3)} Ω`;
 let R = null; // current run
 
@@ -1212,7 +1215,7 @@ function rushQuestion() {
 }
 // bands: up to 3 colors (missing ones draw as empty slots); tol: color, null for none, '' for an empty slot
 function resistorSvg(bands, tol) {
-  const band = (x, c) => c ? `<rect x="${x}" y="14" width="14" height="52" fill="${c}"/>` : `<rect class="slot0" x="${x}" y="16" width="14" height="48"/>`;
+  const band = (x, c) => c ? `<rect class="band" x="${x}" y="15" width="14" height="50" fill="${c}"/>` : `<rect class="slot0" x="${x}" y="16" width="14" height="48"/>`;
   return `<path class="lead" d="M0 40h60M240 40h60"/><rect class="rbody" x="58" y="14" width="184" height="52" rx="24"/>` +
     [0, 1, 2].map(i => band(92 + i * 28, bands[i])).join('') + (tol === null ? '' : band(196, tol));
 }
@@ -1222,9 +1225,9 @@ function rushPad(mode) {
     pad.innerHTML = ['7', '8', '9', 'back', '4', '5', '6', 'k', '1', '2', '3', 'M', '.', '0', 'enter']
       .map(k => `<button data-r="${k}"${k === 'enter' ? ' class="enter"' : ''}${k === 'back' ? ' aria-label="Delete"' : ''}>${k === 'back' ? '⌫' : k === 'enter' ? 'Enter' : k}</button>`).join('');
   } else {
-    pad.innerHTML = BAND.map((c, d) => `<button class="sw" data-r="c${d}" aria-label="${COLOR_NAMES[d]}" style="background:${c};color:${darkInk(c) ? '#fff' : '#111'}">${d}</button>`).join('') +
-      `<button class="sw" data-r="cg" aria-label="gold" style="background:${GOLD};color:#111">×0.1</button>` +
-      `<button class="sw" data-r="cs" aria-label="silver" style="background:${SILVER};color:#111">×0.01</button>` +
+    pad.innerHTML = BAND.map((c, d) => `<button class="sw" data-r="c${d}" aria-label="${COLOR_NAMES[d]}" style="background:${c}"></button>`).join('') +
+      `<button class="sw" data-r="cg" aria-label="gold" style="background:${GOLD}"></button>` +
+      `<button class="sw" data-r="cs" aria-label="silver" style="background:${SILVER}"></button>` +
       '<button data-r="back" aria-label="Delete">⌫</button><button data-r="enter" class="enter">Enter</button>';
   }
 }
