@@ -149,7 +149,7 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .pad button { height: 50px; border: 0; border-radius: 9px; background: var(--key); font: 600 24px var(--num); touch-action: manipulation; }
 .pad .tool { font: 600 15px var(--display); letter-spacing: .04em; }
-.pad .wide { grid-column: span 2; background: var(--ink); color: var(--bg); }
+.pad .zero { grid-column: span 2; }
 .pad [aria-pressed="true"] { background: var(--sel); color: var(--ink); }
 .pad .tool small { font: 700 13px var(--num); margin-left: 3px; }
 
@@ -399,11 +399,11 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
       <button data-k="back" aria-label="Delete">⌫</button>
       <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
-      <button data-k="calc" class="tool" aria-pressed="false">Calc</button>
+      <button data-k="clear" class="tool">Clear</button>
       <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="calc" class="tool" aria-pressed="false">Calc</button>
+      <button data-k=".">.</button><button data-k="0" class="zero">0</button>
       <button data-k="meter" class="tool" aria-pressed="false">Meter<small id="mLeft"></small></button>
-      <button data-k=".">.</button><button data-k="0">0</button>
-      <button data-k="check" class="tool wide">Check</button>
     </div>
   </div>
 </main>
@@ -450,7 +450,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <div id="toolsBlock">
       <h4>Tools</h4>
       <dl class="tools">
-        <dt><span class="chip">Check</span></dt><dd>Marks wrong values. Nothing is marked until you tap it, unless you turn on Show mistakes right away in Settings.</dd>
+        <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
         <dt><span class="chip">Calc</span></dt><dd>Pick ×, ÷, +, −, or ∥, then tap values to drop them in. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Tap an empty box first to send it there. Tap an operation to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag notes into boxes or the calculator.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
@@ -848,7 +848,7 @@ function paint() {
   pk('meter').disabled = S.solved || meterLeft() <= 0;
   pk('.').disabled = mode !== 'calc' && P.dp === 0 && !isNote(sel);
   $('#panel').classList.toggle('calcing', mode === 'calc');
-  pk('check').disabled = S.solved;
+  pk('clear').disabled = S.solved;
   pk('calc').disabled = S.solved;
   $('#calc').hidden = mode !== 'calc';
   if (mode === 'calc') paintCalc();
@@ -885,7 +885,7 @@ function key(k) {
   if (S.solved) return;
   if (k === 'calc') return toggleCalc();
   if (k === 'meter') { mode = mode === 'meter' ? 'input' : 'meter'; return paint(); }
-  if (k === 'check') return check();
+  if (k === 'clear') return clearKey();
   if (mode === 'calc') return calcKey(k);
   if (mode === 'meter') mode = 'input';
   if (!sel) return toast('Tap an empty box first');
@@ -910,15 +910,13 @@ function measure(id) {
   toast(`${label(cells[id])}: ${S.vals[id]} ${O.UNIT[cells[id].q]}`);
   after();
 }
-function check() {
-  let wrong = 0, empty = 0;
-  for (const c of openCells()) {
-    if (!valOf(c.id)) empty++;
-    else if (!right(c.id)) { S.wrong[c.id] = 1; wrong++; }
-  }
-  save(); paint();
-  if (wrong) { buzz([30, 40, 30]); toast(wrong === 1 ? '1 value is off' : `${wrong} values are off`); }
-  else if (empty) toast('Everything so far is right');
+// Clear empties the calculation, or the selected box or note.
+function clearKey() {
+  if (mode === 'calc') { C.slots = [slot(), slot()]; C.at = 0; return paint(); }
+  if (isNote(sel)) { note(sel).t = ''; save(); return paint(); }
+  if (!sel) return;
+  delete S.vals[sel]; delete S.wrong[sel];
+  after();
 }
 function win() {
   S.solved = true; sel = null; mode = 'input';
