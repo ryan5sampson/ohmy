@@ -28,6 +28,7 @@ for (const d of 'EMH') for (const s of 'CXP') for (let k = 0; k < 60; k++) {
     for (const n of flat(p.tree)) for (const x of [n.V, n.I, n.R]) assert(O.fits(x, p.dp), `value ${x} fits ${p.dp} dp`);
     if (p.dp) assert(p.cells.some(c => !O.fits(c.value, p.dp - 1)), 'uses its decimal places');
     const given = p.cells.filter(c => c.given).map(c => c.id);
+    assert(p.cells.some(c => c.id === 'B.R' && !c.given && near(c.value, p.tree.R)), 'total resistance box');
     if (s === 'P') {
       assert(!p.solvable(given) && p.par >= 1 && p.meter === p.par + 2, 'meter puzzle needs measuring');
     } else {

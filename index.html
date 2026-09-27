@@ -277,7 +277,7 @@ dialog .rule { font: 600 16px var(--num); letter-spacing: .02em; }
     <li><span class="rule">V = I × R</span> for each resistor, and for any group of them.</li>
     <li>Series, one path: the current is the same everywhere. Voltages add up, and so do resistances.</li>
     <li>Parallel, side-by-side branches: every branch gets the same voltage. Currents add up. <span class="rule">R = 1 ÷ (1/R₁ + 1/R₂ …)</span></li>
-    <li>The battery's voltage is across the whole circuit, and its current is the total current.</li>
+    <li>The battery card holds the whole circuit's totals: the voltage across it, the total current, and the total resistance.</li>
   </ul>
   <p>Drag any value onto another box, or onto a calculator slot, to copy it there.</p>
   <p><b>Calc</b> picks an operation. Tap values in the circuit to drop them in, then put the result in the box you chose.</p>
@@ -367,7 +367,8 @@ const fmt = x => String(O.round(x, P.dp));
 const valOf = id => cells[id].given ? fmt(cells[id].value) : S.vals[id] || '';
 const right = id => { const v = valOf(id); return v !== '' && Math.abs(parseFloat(v) - cells[id].value) < 1e-6; };
 const openCells = () => P.cells.filter(c => !c.given);
-const label = c => `${c.part === 'B' ? 'Battery' : c.part} ${O.Q[c.q]}`;
+const label = c => c.id === 'B.R' ? 'Total resistance' : `${c.part === 'B' ? 'Battery' : c.part} ${O.Q[c.q]}`;
+const short = c => c.id === 'B.R' ? 'Total' : c.part === 'B' ? 'Bat' : c.part;
 const locked = id => cells[id].given || S.meas[id] || S.solved;
 const meterLeft = () => P.meter - S.used;
 const save = () => store.set(P.code, S);
@@ -421,7 +422,7 @@ function card(part, x, y, qs, i, R) {
   }
   qs.forEach((q, j) => {
     s += `<g class="cell" data-id="${part}.${q}" role="button" tabindex="0" transform="translate(${6 + j * cw} 22)">` +
-      `<rect width="${cw - 4}" height="38" rx="6"/><text class="u" x="5" y="11">${O.UNIT[q]}</text>` +
+      `<rect width="${cw - 4}" height="38" rx="6"/>${part === 'B' && q === 'R' ? '<text class="u" x="5" y="11" textLength="29" lengthAdjust="spacingAndGlyphs">Ω total</text>' : `<text class="u" x="5" y="11">${O.UNIT[q]}</text>`}` +
       `<text class="val" x="${(cw - 4) / 2}" y="31" text-anchor="middle"></text></g>`;
   });
   return s + '</g>';
@@ -450,7 +451,7 @@ function drawCircuit() {
     }
   })(P.tree, M + RAIL, M + 16 + CH + GS, Math.max(P.tree.w, CW));
   const W = Math.max(P.tree.w, CW), cx = M + RAIL + W / 2, yB = M + 16, y2 = yB + CH + GS + P.tree.h, y3 = y2 + 18;
-  out.c.unshift(card('B', cx - CW / 2, yB, ['V', 'I'], 0));
+  out.c.unshift(card('B', cx - CW / 2, yB, ['V', 'I', 'R'], 0));
   // Conventional current leaves + at the bottom of the battery, runs down
   // through the circuit, and returns up the left rail.
   out.w.push(pts(cx, yB + CH, cx, yB + CH + GS), pts(cx, y2, cx, y3, M + 4, y3, M + 4, M, cx, M, cx, yB));
@@ -602,7 +603,7 @@ function setOp(op) { C.op = op; C.slots = [slot(), slot()]; C.at = 0; paint(); }
 function grow() { if (OPS[C.op].many && C.slots.every(s => s.t)) C.slots.push(slot()); }
 function nextEmpty() { grow(); const i = C.slots.findIndex(s => !s.t); if (i >= 0) C.at = i; }
 function fillSlot(id) {
-  Object.assign(C.slots[C.at], { t: valOf(id), u: O.UNIT[cells[id].q], src: cells[id].part === 'B' ? 'Bat' : cells[id].part });
+  Object.assign(C.slots[C.at], { t: valOf(id), u: O.UNIT[cells[id].q], src: short(cells[id]) });
   nextEmpty();
 }
 function calcKey(k) {
@@ -651,7 +652,7 @@ function paintCalc() {
   use.disabled = !(C.target && r && r.fits);
   use.textContent = !C.target ? 'Pick a box for the answer'
     : r && !r.fits ? 'Too many decimals, round it'
-    : `Put ${r ? r.shown : '?'} in ${cells[C.target].part === 'B' ? 'Battery' : cells[C.target].part} ${cells[C.target].q}`;
+    : `Put ${r ? r.shown : '?'} in ${label(cells[C.target])}`;
 }
 $('#ops').onclick = e => { const b = e.target.closest('[data-op]'); if (b) setOp(b.dataset.op); };
 $('#expr').onclick = e => { const b = e.target.closest('[data-slot]'); if (b) { C.at = +b.dataset.slot; paint(); } };
@@ -674,7 +675,7 @@ function dragSource(el) {
   const g = el.closest && el.closest('.cell');
   if (g && valOf(g.dataset.id)) {
     const c = cells[g.dataset.id];
-    return { t: valOf(c.id), u: O.UNIT[c.q], src: c.part === 'B' ? 'Bat' : c.part, from: c.id };
+    return { t: valOf(c.id), u: O.UNIT[c.q], src: short(c), from: c.id };
   }
   if (mode === 'calc' && el.closest && el.closest('.eq')) {
     const r = calcResult();

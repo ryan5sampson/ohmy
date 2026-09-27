@@ -165,6 +165,9 @@
       given = new Set(cells);
       for (const c of shuffle(r, cells.slice())) { given.delete(c); if (!ok(given)) given.add(c); }
     }
+    // Total resistance sits on the battery card. It's added after the clues
+    // are picked so existing codes keep their clues; it's never a clue itself.
+    cells.splice(2, 0, { id: 'B.R', part: 'B', q: 'R', v: tree.r, value: tree.R });
     let par = 0;
     if (style === 'P') {
       shuffle(r, [...given]).slice(0, DROP[diff]).forEach(c => given.delete(c));
