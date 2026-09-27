@@ -48,7 +48,43 @@ button:disabled { cursor: default; opacity: .4; }
 
 /* Home */
 #home { max-width: 460px; margin: 0 auto; padding: 28px 16px 40px; display: grid; gap: 28px; }
-.brand { display: grid; gap: 6px; }
+.brand { display: grid; gap: 6px; position: relative; }
+.rushBtn { position: absolute; top: 0; right: 0; display: grid; justify-items: center; gap: 2px; background: var(--card); border: 2px solid var(--ink); border-radius: 12px; padding: 8px 10px 6px; font: 600 12px var(--display); letter-spacing: .06em; text-transform: uppercase; }
+.rushBtn svg { width: 48px; height: 20px; }
+.lead { stroke: var(--ink); stroke-width: 2; fill: none; }
+.rbody { fill: var(--body); }
+#rush { height: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; }
+.chartBtn { border: 2px solid var(--ink); background: none; border-radius: 9px; padding: 8px 10px; font: 600 13px var(--display); }
+.rpane { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; align-content: start; gap: 12px; }
+.rpane p { margin: 0; }
+#rushPlay { align-content: stretch; grid-template-rows: auto 1fr auto auto; }
+.rsvg { width: 100%; max-width: 360px; margin: 0 auto; display: block; }
+.rsvg .slot0 { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.rstat { display: flex; justify-content: space-between; font: 700 34px/1 var(--num); font-variant-numeric: tabular-nums; }
+.rstat #rTime.low { color: var(--wrong); }
+.rstat #rScore::after { content: ' pts'; font-size: 16px; color: var(--muted); }
+.rcard { display: grid; align-content: center; gap: 10px; background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 14px; transition: background .15s; }
+.rcard.ok { background: color-mix(in srgb, var(--live) 30%, var(--card)); }
+.rcard.bad { background: color-mix(in srgb, var(--wrong) 20%, var(--card)); }
+.rq { font: 700 22px var(--display); text-align: center; text-wrap: balance; }
+.rq small { display: block; font: 500 13px var(--text); color: var(--meas); }
+.rans { font: 700 32px var(--num); text-align: center; min-height: 1.2em; }
+.tols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.tols button { height: 40px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 16px var(--num); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.tols button i { width: 10px; height: 22px; border-radius: 2px; }
+.tols [aria-pressed="true"] { border-color: var(--ink); background: var(--sel); }
+#rPad .sw { font: 700 18px var(--num); border: 1px solid var(--edge); }
+#rPad .enter { grid-column: span 2; background: var(--ink); color: var(--bg); font: 600 17px var(--display); }
+#rPad .wide3 { grid-column: span 3; }
+.rbig { font: 700 64px/1 var(--num); text-align: center; }
+#rushEnd { text-align: center; }
+.ctab { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ctab th { text-align: left; font: 600 12px var(--display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 4px; }
+.ctab td { padding: 5px 4px; border-top: 1px solid var(--edge); font-variant-numeric: tabular-nums; }
+.ctab td i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; border: 1px solid var(--edge); }
+#cheat { max-height: calc(100% - 24px); }
+.ctab td:first-child { white-space: nowrap; }
+.rpane .ghost { padding: 12px; }
 .brand h1 { font: 700 56px/0.9 var(--display); letter-spacing: -0.02em; margin: 0; }
 .brand h1 span { color: var(--live); }
 .brand p { margin: 0; color: var(--muted); max-width: 32ch; }
@@ -243,6 +279,10 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 
 <main id="home">
   <header class="brand">
+    <button class="rushBtn" id="rushBtn" aria-label="Resistor Rush">
+      <svg viewBox="0 0 48 20" aria-hidden="true"><path d="M1 10h9M38 10h9" class="lead"/><rect x="9" y="3" width="30" height="14" rx="6" class="rbody"/><rect x="14" y="3" width="3.5" height="14" fill="#f2cc0c"/><rect x="20" y="3" width="3.5" height="14" fill="#8a3fc2"/><rect x="26" y="3" width="3.5" height="14" fill="#d7261e"/><rect x="33" y="3" width="3.5" height="14" fill="#c9a227"/></svg>
+      <span>Rush</span>
+    </button>
     <h1>Ohm<span>y</span></h1>
     <svg viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 13h120l5-10 10 20 10-20 10 20 10-20 5 10h130"/></svg>
     <p>A daily circuit puzzle. Find every volt, amp, and ohm.</p>
@@ -281,6 +321,37 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <button id="helpBtn">How to play</button>
     <button id="setBtn">Settings</button>
   </nav>
+</main>
+
+<main id="rush" hidden>
+  <header class="bar">
+    <button class="icon" id="rushBack" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="title"><b>Resistor Rush</b><small id="rushBest"></small></div>
+    <button class="chartBtn" id="cheatBtn">Color chart</button>
+  </header>
+  <section id="rushIntro" class="rpane">
+    <svg class="rsvg" viewBox="0 0 300 80" aria-hidden="true" id="rIntroSvg"></svg>
+    <p>Read or build as many resistors as you can in 60 seconds.</p>
+    <p>Some show you the color bands: type the value and press Enter. Others give you the value: tap the colors, then press Enter. When there's a tolerance, pick it too.</p>
+    <p>The color chart is always there, but a resistor you peek at doesn't score.</p>
+    <button class="primary" id="rushStart">Start</button>
+  </section>
+  <section id="rushPlay" class="rpane" hidden>
+    <div class="rstat"><span id="rTime">60</span><span id="rScore">0</span></div>
+    <div class="rcard" id="rCard">
+      <p class="rq" id="rQ"></p>
+      <svg class="rsvg" id="rSvg" viewBox="0 0 300 80" role="img"></svg>
+      <p class="rans" id="rAns"></p>
+    </div>
+    <div class="tols" id="rTols"></div>
+    <div class="pad" id="rPad"></div>
+  </section>
+  <section id="rushEnd" class="rpane" hidden>
+    <p class="rbig" id="rFinal"></p>
+    <p id="rFinalText"></p>
+    <button class="primary" id="rushAgain">Play again</button>
+    <button class="ghost" id="rushHome">Home</button>
+  </section>
 </main>
 
 <main id="game" hidden>
@@ -450,6 +521,13 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
   </section>
 </dialog>
 
+<dialog id="cheat" aria-label="Color chart">
+  <h3>Color chart</h3>
+  <table class="ctab"><thead><tr><th>Color</th><th>Digit</th><th>Multiplier</th><th>Tolerance</th></tr></thead><tbody id="cheatRows"></tbody></table>
+  <p>Read bands from the end they crowd toward. The tolerance band sits apart. No tolerance band means ±20%.</p>
+  <form method="dialog" class="dact"><button class="primary">Back</button></form>
+</dialog>
+
 <dialog id="settings">
   <h3>Settings</h3>
   <label class="opt"><b>Show mistakes right away</b><small>Marks a wrong value as soon as you move to another box.</small><input type="checkbox" id="setInstant"></label>
@@ -498,7 +576,7 @@ function toast(msg) {
 
 /* ---------- Home ---------- */
 function showHome() {
-  $('#game').hidden = true; $('#home').hidden = false;
+  $('#game').hidden = true; $('#rush').hidden = true; $('#home').hidden = false;
   $('#today').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   for (const b of document.querySelectorAll('[data-daily]')) {
     const done = store.get(O.dailyCode(today(), b.dataset.daily), {}).solved;
@@ -552,7 +630,7 @@ function openGame(code) {
   $('#gTitle').textContent = daily ? `Daily ${DIFF[P.diff]}` : `${DIFF[P.diff]} · ${STYLE[P.style]}`;
   $('#gSub').textContent = daily ? `${STYLE[P.style]} · ${P.code}` : P.code;
   drawCircuit();
-  $('#home').hidden = true; $('#game').hidden = false;
+  $('#home').hidden = true; $('#rush').hidden = true; $('#game').hidden = false;
   $('#svg').classList.toggle('live', S.solved);
   paint();
   if (!store.get('seenHelp', false)) { store.set('seenHelp', true); openHelp(); }
@@ -1109,7 +1187,156 @@ $('#winShare').onclick = share;
 $('#winHome').onclick = () => { $('#win').close(); location.hash = ''; };
 $('#winNext').onclick = () => { $('#win').close(); go(O.randomCode(P.diff, P.style)); };
 
+/* ---------- Resistor Rush ---------- */
+// 60 seconds of reading bands into values and building values from bands.
+const RUSH_SECONDS = 60;
+const E24 = [10, 11, 12, 13, 15, 16, 18, 20, 22, 24, 27, 30, 33, 36, 39, 43, 47, 51, 56, 62, 68, 75, 82, 91];
+const GOLD = '#c9a227', SILVER = '#b8b8b8';
+const COLOR_NAMES = ['black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray', 'white'];
+const TOL = { 1: BAND[1], 2: BAND[2], 5: GOLD, 10: SILVER }; // tolerance % -> band color
+const multColor = m => m === -1 ? GOLD : m === -2 ? SILVER : BAND[m];
+const darkInk = c => ['#1a1a1a', '#7a4a1e', '#d7261e', '#2f5fd0', '#8a3fc2', '#8c8c8c'].includes(c);
+const ohms = v => v >= 1e6 ? `${+(v / 1e6).toFixed(3)} MΩ` : v >= 1e3 ? `${+(v / 1e3).toFixed(3)} kΩ` : `${+v.toFixed(3)} Ω`;
+let R = null; // current run
+
+function rushQuestion() {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  let q;
+  do {
+    const n = pick(E24), m = pick([-1, 0, 1, 1, 2, 2, 3, 3, 4, 5]);
+    q = { mode: Math.random() < 0.5 ? 'read' : 'build', n, m, value: n * 10 ** m, tol: Math.random() < 0.5 ? pick([5, 5, 10, 1, 2]) : null };
+  } while (R.q && R.q.value === q.value);
+  q.bands = [BAND[Math.floor(q.n / 10)], BAND[q.n % 10], multColor(q.m)];
+  q.text = ohms(q.value) + (q.tol ? ` ±${q.tol}%` : '');
+  return q;
+}
+// bands: up to 3 colors (missing ones draw as empty slots); tol: color, null for none, '' for an empty slot
+function resistorSvg(bands, tol) {
+  const band = (x, c) => c ? `<rect x="${x}" y="14" width="14" height="52" fill="${c}"/>` : `<rect class="slot0" x="${x}" y="16" width="14" height="48"/>`;
+  return `<path class="lead" d="M0 40h60M240 40h60"/><rect class="rbody" x="58" y="14" width="184" height="52" rx="24"/>` +
+    [0, 1, 2].map(i => band(92 + i * 28, bands[i])).join('') + (tol === null ? '' : band(196, tol));
+}
+function rushPad(mode) {
+  const pad = $('#rPad');
+  if (mode === 'read') {
+    pad.innerHTML = ['7', '8', '9', 'back', '4', '5', '6', 'k', '1', '2', '3', 'M', '.', '0', 'enter']
+      .map(k => `<button data-r="${k}"${k === 'enter' ? ' class="enter"' : ''}${k === 'back' ? ' aria-label="Delete"' : ''}>${k === 'back' ? '⌫' : k === 'enter' ? 'Enter' : k}</button>`).join('');
+  } else {
+    pad.innerHTML = BAND.map((c, d) => `<button class="sw" data-r="c${d}" aria-label="${COLOR_NAMES[d]}" style="background:${c};color:${darkInk(c) ? '#fff' : '#111'}">${d}</button>`).join('') +
+      `<button class="sw" data-r="cg" aria-label="gold" style="background:${GOLD};color:#111">×0.1</button>` +
+      `<button class="sw" data-r="cs" aria-label="silver" style="background:${SILVER};color:#111">×0.01</button>` +
+      '<button data-r="back" aria-label="Delete">⌫</button><button data-r="enter" class="enter">Enter</button>';
+  }
+}
+function rushPaint() {
+  const q = R.q;
+  $('#rQ').innerHTML = (q.mode === 'read' ? "What's this resistor?" : `Build ${q.text}`) + (R.peek ? '<small>Peeked, so this one won\'t score</small>' : '');
+  $('#rSvg').innerHTML = q.mode === 'read' ? resistorSvg(q.bands, q.tol ? TOL[q.tol] : null)
+    : resistorSvg(R.bands, q.tol ? (R.tol ? TOL[R.tol] : '') : null);
+  $('#rSvg').setAttribute('aria-label', q.mode === 'read' ? 'Resistor bands: ' + q.bands.map(c => c === GOLD ? 'gold' : c === SILVER ? 'silver' : COLOR_NAMES[BAND.indexOf(c)]).join(', ') + (q.tol ? ', tolerance band' : '') : 'Resistor to color in');
+  $('#rAns').textContent = q.mode === 'read' ? `${R.input || '?'} Ω` + (q.tol ? ` ±${R.tol || '?'}%` : '') : '';
+  $('#rAns').hidden = q.mode !== 'read';
+  $('#rTols').hidden = !q.tol;
+  for (const b of $('#rTols').children) b.setAttribute('aria-pressed', +b.dataset.tol === R.tol);
+  $('#rScore').textContent = R.score;
+}
+function rushNext() {
+  R.q = rushQuestion(); R.input = ''; R.bands = []; R.tol = null; R.peek = false; R.lock = false;
+  $('#rCard').className = 'rcard';
+  rushPad(R.q.mode); rushPaint();
+}
+function rushKey(k) {
+  if (!R || R.lock || R.done) return;
+  const q = R.q;
+  if (k === 'enter') return rushSubmit();
+  if (k === 'back') { if (q.mode === 'read') R.input = R.input.slice(0, -1); else R.bands.pop(); return rushPaint(); }
+  if (q.mode === 'read') {
+    if (/[kM]/.test(R.input) || R.input.length >= 7) return;
+    if (k === '.' && R.input.includes('.')) return;
+    if ((k === 'k' || k === 'M') && !/\d/.test(R.input)) return;
+    R.input += k;
+  } else {
+    if (R.bands.length >= 3) return;
+    const c = k === 'cg' ? GOLD : k === 'cs' ? SILVER : BAND[+k.slice(1)];
+    if ((c === GOLD || c === SILVER) && R.bands.length < 2) return toast('Gold and silver are only multipliers');
+    R.bands.push(c);
+  }
+  rushPaint();
+}
+function rushSubmit() {
+  const q = R.q;
+  const unfinished = q.mode === 'read' ? !/\d/.test(R.input) : R.bands.length < 3;
+  if (unfinished || (q.tol && !R.tol)) return toast(q.tol && !R.tol && !unfinished ? 'Pick a tolerance too' : 'Finish your answer first');
+  let ok;
+  if (q.mode === 'read') {
+    const m = /^([\d.]+)([kM]?)$/.exec(R.input), v = m && parseFloat(m[1]) * ({ k: 1e3, M: 1e6 }[m[2]] || 1);
+    ok = !!m && Math.abs(v - q.value) <= q.value * 1e-9;
+  } else ok = R.bands.every((c, i) => c === q.bands[i]);
+  ok = ok && (!q.tol || R.tol === q.tol);
+  R.tries++;
+  if (ok && !R.peek) R.score++;
+  R.lock = true;
+  $('#rCard').className = 'rcard ' + (ok ? 'ok' : 'bad');
+  if (ok) { buzz(10); return setTimeout(rushNext, 250); }
+  buzz([30, 40, 30]);
+  if (q.mode === 'build') $('#rSvg').innerHTML = resistorSvg(q.bands, q.tol ? TOL[q.tol] : null);
+  else $('#rAns').textContent = q.text;
+  $('#rQ').innerHTML = q.mode === 'read' ? 'It was' : `This is ${q.text}`;
+  setTimeout(rushNext, 1100);
+}
+function rushTick() {
+  const left = Math.max(0, RUSH_SECONDS - Math.floor((Date.now() - R.t0) / 1000));
+  $('#rTime').textContent = left;
+  $('#rTime').classList.toggle('low', left <= 10);
+  if (left === 0) rushEnd();
+}
+function rushEnd() {
+  clearInterval(R.timer); R.done = true;
+  const best = Math.max(R.score, store.get('rushBest', 0));
+  store.set('rushBest', best);
+  $('#rFinal').textContent = R.score;
+  $('#rFinalText').textContent = `${R.score === 1 ? 'resistor' : 'resistors'} in ${RUSH_SECONDS} seconds, out of ${R.tries} answered.` +
+    (R.score >= best && R.score ? ' New best!' : ` Your best is ${best}.`) + (R.peeks ? ` You peeked ${R.peeks} time${R.peeks > 1 ? 's' : ''}.` : '');
+  rushShow('End');
+}
+function rushShow(which) { for (const w of ['Intro', 'Play', 'End']) $('#rush' + w).hidden = w !== which; }
+function rushStart() {
+  stopRush();
+  R = { q: null, score: 0, tries: 0, peeks: 0, t0: Date.now(), done: false };
+  R.timer = setInterval(rushTick, 200);
+  rushShow('Play'); rushNext(); rushTick();
+}
+function stopRush() { if (R) { clearInterval(R.timer); R = null; } }
+function showRush() {
+  $('#home').hidden = true; $('#game').hidden = true; $('#rush').hidden = false;
+  const best = store.get('rushBest', 0);
+  $('#rushBest').textContent = best ? `Best: ${best}` : '60-second resistor drill';
+  $('#rIntroSvg').innerHTML = resistorSvg([BAND[4], BAND[7], BAND[2]], GOLD);
+  rushShow('Intro');
+}
+$('#rTols').innerHTML = [1, 2, 5, 10].map(t => `<button data-tol="${t}"><i style="background:${TOL[t]}"></i>±${t}%</button>`).join('');
+$('#rTols').onclick = e => { const b = e.target.closest('[data-tol]'); if (b && R && !R.lock) { R.tol = +b.dataset.tol; rushPaint(); } };
+$('#rPad').onclick = e => { const b = e.target.closest('[data-r]'); if (b) rushKey(b.dataset.r); };
+$('#rushBtn').onclick = () => { location.hash = 'rush'; };
+$('#rushBack').onclick = $('#rushHome').onclick = () => { location.hash = ''; };
+$('#rushStart').onclick = $('#rushAgain').onclick = rushStart;
+$('#cheatRows').innerHTML = COLOR_NAMES.map((n, d) => [n, BAND[d], d, ['×1', '×10', '×100', '×1k', '×10k', '×100k', '×1M'][d] || '', { 1: '±1%', 2: '±2%' }[d] || ''])
+  .concat([['gold', GOLD, '', '×0.1', '±5%'], ['silver', SILVER, '', '×0.01', '±10%']])
+  .map(([n, c, d, m, t]) => `<tr><td><i style="background:${c}"></i>${n}</td><td>${d}</td><td>${m}</td><td>${t}</td></tr>`).join('');
+$('#cheatBtn').onclick = () => {
+  if (R && !R.done && !R.peek) { R.peek = true; R.peeks++; rushPaint(); }
+  $('#cheat').showModal();
+};
+addEventListener('keydown', e => {
+  if ($('#rush').hidden || !R || document.querySelector('dialog[open]') || e.metaKey || e.ctrlKey) return;
+  const k = e.key === 'Enter' ? 'enter' : e.key === 'Backspace' ? 'back' : R.q && R.q.mode === 'read' && /^[0-9.]$/.test(e.key) ? e.key
+    : R.q && R.q.mode === 'read' && /^[kK]$/.test(e.key) ? 'k' : R.q && R.q.mode === 'read' && /^[mM]$/.test(e.key) ? 'M' : null;
+  if (k) { e.preventDefault(); rushKey(k); }
+});
+
 function route() {
+  stopRush();
+  if (location.hash === '#rush') return showRush();
   const code = O.parseCode(location.hash.slice(1));
   code ? openGame(code) : showHome();
 }
