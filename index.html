@@ -102,9 +102,18 @@ button:disabled { cursor: default; opacity: .4; }
 .revealing #rPad > :not([data-r="enter"]) { display: none; }
 .revealing #rPad [data-r="enter"] { grid-column: 1 / -1; }
 .rcard .linkish, .rpane > .linkish { justify-self: center; text-align: center; }
-.rwhy ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; font-size: 15px; }
-.blabel { font: 700 16px var(--num); fill: var(--ink); text-anchor: middle; }
-.blabel.on { fill: var(--mine); }
+.rsteps { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 15px; }
+.rsteps dt { font: 600 12px var(--display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding-top: 2px; }
+.rsteps dd { margin: 0; font-variant-numeric: tabular-nums; }
+.rsvg.big { max-width: 420px; }
+.leader { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.leader.on { stroke: var(--mine); stroke-width: 2.5; }
+.call rect { fill: var(--cell); stroke: var(--edge); stroke-width: 1.5; }
+.call.on rect { stroke: var(--mine); stroke-width: 2.5; }
+.call text { text-anchor: middle; fill: var(--ink); }
+.call .role { font: 600 11px var(--text); fill: var(--muted); }
+.call .cv { font: 700 21px var(--num); }
+.call .cn { font: 500 11px var(--text); fill: var(--muted); }
 .prac #rTime { font: 600 20px var(--display); align-self: center; color: var(--muted); }
 .prac #rScore::after { content: ' right'; }
 .rhint { display: none; align-items: center; gap: 6px; font: 500 14px var(--text); color: var(--muted); }
@@ -378,7 +387,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <button class="linkish" id="rushLearnBtn">New to color codes? Learn to read them</button>
   </section>
   <section id="rushLearn" class="rpane" hidden>
-    <svg class="rsvg" id="lSvg" viewBox="0 0 300 114" role="img"></svg>
+    <svg class="rsvg big" id="lSvg" viewBox="0 0 320 174" role="img"></svg>
     <h3 class="rq" id="lTitle"></h3>
     <p id="lText"></p>
     <div class="snav"><button class="ghost" id="lPrev">Back</button><div class="dots" id="lDots" aria-hidden="true"></div><button class="primary" id="lNext">Next</button></div>
@@ -1257,28 +1266,44 @@ function rushQuestion() {
   return q;
 }
 // bands: up to 3 colors (missing ones draw as empty slots); tol: color, null for none, '' for an empty slot
-// o.labels: text under each band (needs a 114-tall viewBox; the multiplier sits lower so it clears the digits); o.hi: the one band to spotlight.
-function resistorSvg(bands, tol, o = {}) {
-  const xs = [92, 120, 148, 196], dim = i => o.hi != null && o.hi !== i ? ' opacity=".25"' : '';
-  const band = (i, c) => c ? `<rect class="band" x="${xs[i]}" y="15" width="14" height="50" fill="${c}"${dim(i)}/>` : `<rect class="slot0" x="${xs[i]}" y="16" width="14" height="48"/>`;
+function resistorSvg(bands, tol) {
+  const xs = [92, 120, 148, 196];
+  const band = (i, c) => c ? `<rect class="band" x="${xs[i]}" y="15" width="14" height="50" fill="${c}"/>` : `<rect class="slot0" x="${xs[i]}" y="16" width="14" height="48"/>`;
   return `<path class="lead" d="M0 40h60M240 40h60"/><rect class="rbody" x="58" y="14" width="184" height="52" rx="24"/>` +
-    [0, 1, 2].map(i => band(i, bands[i])).join('') + (tol === null ? '' : band(3, tol)) +
-    (o.labels || []).map((t, i) => t ? `<text class="blabel${o.hi === i ? ' on' : ''}" x="${xs[i] + 7}" y="${i === 2 ? 108 : 88}">${t}</text>` : '').join('');
+    [0, 1, 2].map(i => band(i, bands[i])).join('') + (tol === null ? '' : band(3, tol));
 }
 const colorName = c => c === GOLD ? 'gold' : c === SILVER ? 'silver' : COLOR_NAMES[BAND.indexOf(c)];
 const plain = v => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
 const MULT = { '-2': '×0.01', '-1': '×0.1', 0: '×1', 1: '×10', 2: '×100', 3: '×1k', 4: '×10k', 5: '×100k', 6: '×1M' };
-const bandLabels = q => [Math.floor(q.n / 10), q.n % 10, MULT[q.m], q.tol ? `±${q.tol}%` : ''];
-// The answer in words, band by band.
+const bandLabels = q => [Math.floor(q.n / 10), q.n % 10, MULT[q.m], q.tol ? `±${q.tol}%` : '±20%'];
+// A big resistor with a callout box under each band saying what the band is
+// for, what it's worth, and its color. values: [digit, digit, multiplier,
+// tolerance], any of them blank to leave that box out. hi spotlights one band.
+const DIAGRAM_H = 174;
+function bandDiagram(bands, tol, values = [], hi) {
+  const bx = [84, 118, 152, 226], cx = [40, 120, 200, 280], roles = ['1st digit', '2nd digit', 'Multiplier', 'Tolerance'];
+  const cols = [...bands, tol], dim = i => hi != null && hi !== i ? ' opacity=".3"' : '', on = i => hi === i ? ' on' : '';
+  let s = '<path class="lead" d="M0 42h40M280 42h40"/><rect class="rbody" x="40" y="10" width="240" height="64" rx="30"/>';
+  cols.forEach((c, i) => { if (c) s += `<rect x="${bx[i]}" y="10" width="18" height="64" fill="${c}"${dim(i)}/>`; });
+  values.forEach((v, i) => {
+    if (v === '' || v == null) return;
+    const c = cols[i], x = cx[i];
+    if (c) s += `<path class="leader${on(i)}" d="M${bx[i] + 9} 74V90H${x}V104"${dim(i)}/>`;
+    s += `<g class="call${on(i)}"${dim(i)}><rect x="${x - 37}" y="104" width="74" height="66" rx="8"/>` +
+      `<text class="role" x="${x}" y="121">${roles[i]}</text><text class="cv" x="${x}" y="146">${v}</text>` +
+      `<text class="cn" x="${x}" y="162">${c ? colorName(c) : 'no band'}</text></g>`;
+  });
+  return s;
+}
+// The math behind the answer, one short row per step.
 function walkthrough(q) {
-  const [a, b, c] = q.bands, m = MULT[q.m].slice(1), mult = q.m < 0 ? m : plain(10 ** q.m);
-  const zeros = q.m > 0 ? `, so add ${q.m} zero${q.m > 1 ? 's' : ''}` : q.m === 0 ? ', so no zeros' : '';
-  const steps = q.mode === 'build' ? [`${q.value >= 1000 ? `${ohms(q.value)} is ${plain(q.value)} Ω, which` : `${plain(q.value)} Ω`} is ${q.n} × ${mult}.`] : [];
-  return steps.concat([
-    `First band: ${colorName(a)} is ${Math.floor(q.n / 10)}.`,
-    `Second band: ${colorName(b)} is ${q.n % 10}. The two digits make ${q.n}.`,
-    `Third band: ${colorName(c)} means ×${mult}${zeros}. ${q.n} × ${mult} = ${plain(q.value)} Ω${q.value >= 1000 ? `, or ${ohms(q.value)}` : ''}.`,
-    q.tol ? `Tolerance band: ${colorName(TOL[q.tol])} is ±${q.tol}%.` : "No tolerance band, so it's ±20%.",
+  const [a, b, c] = q.bands, mult = q.m < 0 ? MULT[q.m].slice(1) : plain(10 ** q.m);
+  const total = `${plain(q.value)} Ω${q.value >= 1000 ? ` = ${ohms(q.value)}` : ''}`;
+  const zeros = q.m > 0 ? ` (${q.m} zero${q.m > 1 ? 's' : ''})` : '';
+  return (q.mode === 'build' ? [['Value', `${q.value >= 1000 ? ohms(q.value) + ' = ' : ''}${plain(q.value)} Ω = ${q.n} × ${mult}`]] : []).concat([
+    ['Digits', `${colorName(a)} ${Math.floor(q.n / 10)}, ${colorName(b)} ${q.n % 10} → ${q.n}`],
+    ['Multiply', `${colorName(c)} ×${mult}${zeros} → ${total}`],
+    ['Tolerance', q.tol ? `${colorName(TOL[q.tol])} → ±${q.tol}%` : 'no band → ±20%'],
   ]);
 }
 // Practice can label every button with its number; otherwise buttons show only
@@ -1320,6 +1345,7 @@ function rushNext() {
   $('#rCard').className = 'rcard';
   $('#rushPlay').classList.remove('revealing');
   $('#rSvg').setAttribute('viewBox', '0 0 300 80');
+  $('#rSvg').classList.remove('big');
   $('#rWhy').hidden = true;
   $('#rShowMe').hidden = !R.practice;
   rushPad(R.q.mode); rushPaint();
@@ -1372,11 +1398,14 @@ function rushReveal(ok) {
   $('#rushPlay').classList.add('revealing');
   $('#rCard').className = 'rcard' + (ok === true ? ' ok' : ok === false ? ' bad' : '');
   $('#rQ').textContent = ok === true ? 'Right!' : ok === false ? "Not quite. Here's how it reads" : "Here's how it reads";
-  $('#rSvg').setAttribute('viewBox', '0 0 300 114');
-  $('#rSvg').innerHTML = resistorSvg(q.bands, q.tol ? TOL[q.tol] : null, { labels: bandLabels(q) });
+  $('#rSvg').setAttribute('viewBox', `0 0 320 ${DIAGRAM_H}`);
+  $('#rSvg').classList.add('big');
+  $('#rSvg').innerHTML = bandDiagram(q.bands, q.tol ? TOL[q.tol] : null, bandLabels(q));
   $('#rAns').hidden = false;
   $('#rAns').textContent = q.text;
-  $('#rWhy').innerHTML = '<ol>' + walkthrough(q).map(t => `<li>${t}</li>`).join('') + '</ol>';
+  // Keep "47 × 1,000" and "4.7 kΩ" from splitting across lines.
+  const glue = d => d.replace(/ ([×Ωk])/g, '\u00a0$1').replace(/× /g, '×\u00a0');
+  $('#rWhy').innerHTML = '<dl class="rsteps">' + walkthrough(q).map(([t, d]) => `<dt>${t}</dt><dd>${glue(d)}</dd>`).join('') + '</dl>';
   $('#rWhy').hidden = false;
   $('#rShowMe').hidden = true;
   $('#rTols').hidden = true;
@@ -1423,7 +1452,8 @@ const LEARN = [
 let li = 0;
 function learnPaint() {
   const s = LEARN[li];
-  $('#lSvg').innerHTML = resistorSvg(s.b.map(d => d === 'g' ? GOLD : BAND[d]), s.tol ? TOL[s.tol] : null, { labels: s.labels, hi: s.hi });
+  $('#lSvg').setAttribute('viewBox', `0 0 320 ${s.labels ? DIAGRAM_H : 84}`);
+  $('#lSvg').innerHTML = bandDiagram(s.b.map(d => d === 'g' ? GOLD : BAND[d]), s.tol ? TOL[s.tol] : null, s.labels, s.hi);
   $('#lSvg').setAttribute('aria-label', 'Resistor: ' + s.b.map(d => d === 'g' ? 'gold' : COLOR_NAMES[d]).join(', ') + (s.tol ? ', then a tolerance band' : ''));
   $('#lTitle').textContent = s.t;
   $('#lText').textContent = s.p;
