@@ -15,7 +15,7 @@
 :root {
   --bg: #EEF1EC; --ink: #13201A; --muted: #5B685F; --card: #FFFFFF; --cell: #E2E7E1;
   --edge: #C8D0C9; --wire: #13201A; --mine: #1D5BD6; --meas: #A34E00; --wrong: #C8321F;
-  --sel: #FFD23F; --target: #CFDDFB; --live: #F2A900; --key: #DAE0D9; --body: #EADFC6;
+  --sel: #FFD23F; --target: #CFDDFB; --live: #F2A900; --key: #DAE0D9; --body: #D2B98E;
   --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
   --text: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --num: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
@@ -25,14 +25,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0B1F17; --ink: #E6EDE4; --muted: #8FA396; --card: #10291D; --cell: #1A3D2A;
     --edge: #24503A; --wire: #C8894F; --mine: #8DB4FF; --meas: #F0A15A; --wrong: #FF7A66;
-    --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #D8C9A6;
+    --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #D2B98E;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0B1F17; --ink: #E6EDE4; --muted: #8FA396; --card: #10291D; --cell: #1A3D2A;
   --edge: #24503A; --wire: #C8894F; --mine: #8DB4FF; --meas: #F0A15A; --wrong: #FF7A66;
-  --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #D8C9A6;
+  --sel: #7D6412; --target: #23406E; --live: #FFC93C; --key: #173826; --body: #D2B98E;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -71,7 +71,7 @@ button:disabled { cursor: default; opacity: .4; }
 .rans { font: 700 32px var(--num); text-align: center; min-height: 1.2em; }
 .tols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .tols button { height: 40px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 16px var(--num); display: flex; align-items: center; justify-content: center; gap: 6px; }
-.tols button i { width: 10px; height: 22px; border-radius: 2px; border: 1px solid rgb(0 0 0 / .55); }
+.tols button i { width: 10px; height: 22px; border-radius: 2px; }
 .tols [aria-pressed="true"] { border-color: var(--ink); background: var(--sel); }
 #rPad .sw { border: 2px solid var(--muted); }
 #rPad .enter { grid-column: span 2; background: var(--ink); color: var(--bg); font: 600 17px var(--display); }
@@ -181,8 +181,6 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .lbl { font: 700 13px var(--display); fill: var(--ink); }
 .sym { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 .res { fill: var(--body); }
-.band { stroke: #000; stroke-opacity: .55; stroke-width: 1; }
-.rsvg .band { stroke-width: 1.5; }
 .bands { display: none; }
 .card.known .bands { display: inline; }
 .cell rect { fill: var(--cell); }
@@ -284,7 +282,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 <main id="home">
   <header class="brand">
     <button class="rushBtn" id="rushBtn" aria-label="Resistor Rush">
-      <svg viewBox="0 0 48 20" aria-hidden="true"><path d="M1 10h9M38 10h9" class="lead"/><rect x="9" y="3" width="30" height="14" rx="6" class="rbody"/><rect x="14" y="3" width="3.5" height="14" fill="#f2cc0c" class="band"/><rect x="20" y="3" width="3.5" height="14" fill="#8a3fc2" class="band"/><rect x="26" y="3" width="3.5" height="14" fill="#d7261e" class="band"/><rect x="33" y="3" width="3.5" height="14" fill="#c9a227" class="band"/></svg>
+      <svg viewBox="0 0 48 20" aria-hidden="true"><path d="M1 10h9M38 10h9" class="lead"/><rect x="9" y="3" width="30" height="14" rx="6" class="rbody"/><rect x="14" y="3" width="3.5" height="14" fill="#FFE600" class="band"/><rect x="20" y="3" width="3.5" height="14" fill="#8a3fc2" class="band"/><rect x="26" y="3" width="3.5" height="14" fill="#d7261e" class="band"/><rect x="33" y="3" width="3.5" height="14" fill="#c9a227" class="band"/></svg>
       <span>Rush</span>
     </button>
     <h1>Ohm<span>y</span></h1>
@@ -644,7 +642,7 @@ function openGame(code) {
 // Series runs down the screen, parallel branches sit side by side.
 const CW = 132, CH = 66, GS = 22, GP = 14, T = 16, M = 10, RAIL = 26;
 const pts = (...p) => { let d = ''; for (let i = 0; i < p.length; i += 2) d += (i ? 'L' : 'M') + p[i] + ' ' + p[i + 1]; return `<path class="w" d="${d}"/>`; };
-const BAND = ['#1a1a1a', '#7a4a1e', '#d7261e', '#f47b20', '#f2cc0c', '#2e9e44', '#2f5fd0', '#8a3fc2', '#8c8c8c', '#f4f4f4'];
+const BAND = ['#1a1a1a', '#7a4a1e', '#d7261e', '#f47b20', '#FFE600', '#2e9e44', '#2f5fd0', '#8a3fc2', '#8c8c8c', '#f4f4f4'];
 function bands(R) { // real resistor color code: two digits and a multiplier
   for (let m = -2; m <= 6; m++) {
     const n = Math.round(R / 10 ** m);
