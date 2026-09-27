@@ -90,6 +90,7 @@ button:disabled { cursor: default; opacity: .4; }
 .tols button { height: 40px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 16px var(--num); display: flex; align-items: center; justify-content: center; gap: 6px; }
 .tols button i { width: 10px; height: 22px; border-radius: 2px; }
 .tols [aria-pressed="true"] { border-color: var(--ink); background: var(--sel); }
+.tols button i:only-child { width: 60%; }
 #rPad .sw { border: 2px solid var(--muted); }
 #rPad .enter { grid-column: span 2; background: var(--ink); color: var(--bg); font: 600 17px var(--display); }
 #rPad .wide3 { grid-column: span 3; }
@@ -106,6 +107,10 @@ button:disabled { cursor: default; opacity: .4; }
 .blabel.on { fill: var(--mine); }
 .prac #rTime { font: 600 20px var(--display); align-self: center; color: var(--muted); }
 .prac #rScore::after { content: ' right'; }
+.rhint { display: none; align-items: center; gap: 6px; font: 500 14px var(--text); color: var(--muted); }
+.rhint input { width: 20px; height: 20px; accent-color: var(--mine); }
+.prac .rhint { display: flex; }
+#rPad .sw { font: 700 17px var(--num); }
 #rushLearn { align-content: start; }
 #rushLearn .rq { margin: 0; }
 .rbig { font: 700 64px/1 var(--num); text-align: center; }
@@ -379,7 +384,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <div class="snav"><button class="ghost" id="lPrev">Back</button><div class="dots" id="lDots" aria-hidden="true"></div><button class="primary" id="lNext">Next</button></div>
   </section>
   <section id="rushPlay" class="rpane" hidden>
-    <div class="rstat"><span id="rTime">60</span><span id="rScore">0</span></div>
+    <div class="rstat"><span id="rTime">60</span><label class="rhint"><input type="checkbox" id="rHint"> Show numbers</label><span id="rScore">0</span></div>
     <div class="rcard" id="rCard">
       <p class="rq" id="rQ"></p>
       <svg class="rsvg" id="rSvg" viewBox="0 0 300 80" role="img"></svg>
@@ -1276,15 +1281,24 @@ function walkthrough(q) {
     q.tol ? `Tolerance band: ${colorName(TOL[q.tol])} is ±${q.tol}%.` : "No tolerance band, so it's ±20%.",
   ]);
 }
+// Practice can label every button with its number; otherwise buttons show only
+// what you'd look up: colors when building, percentages when reading.
+const hints = () => R && R.practice && store.get('rushHints', false);
+const lightText = c => ['#1a1a1a', '#7a4a1e', '#d7261e', '#2f5fd0', '#8a3fc2', '#8c8c8c'].includes(c);
+function rushTols(mode) {
+  const color = mode === 'build' || hints(), pct = mode === 'read' || hints();
+  $('#rTols').innerHTML = [1, 2, 5, 10].map(t => `<button data-tol="${t}" aria-label="${pct ? `±${t}%` : colorName(TOL[t])}">` +
+    (color ? `<i style="background:${TOL[t]}"></i>` : '') + (pct ? `±${t}%` : '') + '</button>').join('');
+}
 function rushPad(mode) {
+  rushTols(mode);
   const pad = $('#rPad');
   if (mode === 'read') {
     pad.innerHTML = ['7', '8', '9', 'back', '4', '5', '6', 'k', '1', '2', '3', 'M', '.', '0', 'enter']
       .map(k => `<button data-r="${k}"${k === 'enter' ? ' class="enter"' : ''}${k === 'back' ? ' aria-label="Delete"' : ''}>${k === 'back' ? '⌫' : k === 'enter' ? 'Enter' : k}</button>`).join('');
   } else {
-    pad.innerHTML = BAND.map((c, d) => `<button class="sw" data-r="c${d}" aria-label="${COLOR_NAMES[d]}" style="background:${c}"></button>`).join('') +
-      `<button class="sw" data-r="cg" aria-label="gold" style="background:${GOLD}"></button>` +
-      `<button class="sw" data-r="cs" aria-label="silver" style="background:${SILVER}"></button>` +
+    const sw = (k, c, name, num) => `<button class="sw" data-r="${k}" aria-label="${name}" style="background:${c};color:${lightText(c) ? '#fff' : '#111'}">${hints() ? num : ''}</button>`;
+    pad.innerHTML = BAND.map((c, d) => sw('c' + d, c, COLOR_NAMES[d], d)).join('') + sw('cg', GOLD, 'gold', '×0.1') + sw('cs', SILVER, 'silver', '×0.01') +
       '<button data-r="back" aria-label="Delete">⌫</button><button data-r="enter" class="enter">Enter</button>';
   }
 }
@@ -1389,6 +1403,7 @@ function rushStart(practice) {
   stopRush();
   R = { q: null, score: 0, tries: 0, peeks: 0, t0: Date.now(), done: false, practice };
   $('#rushPlay').classList.toggle('prac', practice);
+  $('#rHint').checked = store.get('rushHints', false);
   rushShow('Play'); rushNext();
   if (practice) $('#rTime').textContent = 'Practice';
   else { R.timer = setInterval(rushTick, 200); rushTick(); }
@@ -1428,8 +1443,11 @@ function showRush() {
   $('#rIntroSvg').innerHTML = resistorSvg([BAND[4], BAND[7], BAND[2]], GOLD);
   rushShow('Intro');
 }
-$('#rTols').innerHTML = [1, 2, 5, 10].map(t => `<button data-tol="${t}"><i style="background:${TOL[t]}"></i>±${t}%</button>`).join('');
 $('#rTols').onclick = e => { const b = e.target.closest('[data-tol]'); if (b && R && !R.lock) { R.tol = +b.dataset.tol; rushPaint(); } };
+$('#rHint').onchange = () => {
+  store.set('rushHints', $('#rHint').checked);
+  if (R && !R.reveal) { rushPad(R.q.mode); rushPaint(); }
+};
 $('#rPad').onclick = e => { const b = e.target.closest('[data-r]'); if (b) rushKey(b.dataset.r); };
 $('#rushBtn').onclick = () => { location.hash = 'rush'; };
 $('#rushBack').onclick = $('#rushHome').onclick = () => { location.hash = ''; };
