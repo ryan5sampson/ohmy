@@ -42,4 +42,5 @@ assert.strictEqual(O.parseCode('mx-7k3q9'), 'MX-7K3Q9');
 assert.strictEqual(O.parseCode('MXOIL00'), 'MX-01100');
 assert.strictEqual(O.parseCode('ZX-12345'), null);
 assert.strictEqual(O.dailyCode('2026-09-27', 'H'), O.dailyCode('2026-09-27', 'H'));
+assert(['M', 'H'].every(d => O.dailyCode('2026-09-27', d)[1] === 'X'), 'Medium and Hard dailies are Mixed');
 console.log(`ok: ${count} puzzles in ${Date.now() - t0} ms`);

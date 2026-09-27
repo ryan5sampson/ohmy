@@ -55,7 +55,7 @@
   function dailyCode(date, diff) { // date as YYYY-MM-DD; same three puzzles for everyone
     let h = 0x811C9DC5;
     for (const c of `${date}|${diff}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0;
-    return `${diff}${h >>> 31 ? 'X' : 'C'}-${encode(h)}`;
+    return `${diff}${diff !== 'E' || h >>> 31 ? 'X' : 'C'}-${encode(h)}`; // Medium and Hard are always Mixed
   }
 
   // Circuit tree: {t:'R'} resistor, {t:'S', kids} series, {t:'P', kids} parallel.
