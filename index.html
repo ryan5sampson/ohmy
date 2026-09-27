@@ -103,15 +103,15 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 /* Calculator */
 #calc { display: grid; gap: 8px; }
 .ops { display: flex; gap: 6px; }
-.ops button { flex: 1; height: 38px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 20px var(--num); }
+.ops button { flex: 1; height: 34px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 20px var(--num); }
 .ops [aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
-#opHint { margin: 0; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ops .ans { flex: 0 0 auto; padding: 0 8px; font: 600 14px var(--display); }
+#panel.calcing .pad button { height: 42px; }
 #expr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font: 600 20px var(--num); }
 .slot { min-width: 48px; height: 40px; padding: 0 8px; border: 2px solid var(--edge); background: var(--cell); border-radius: 8px; font: 600 19px var(--num); display: inline-flex; align-items: center; gap: 3px; }
 .slot.empty { color: var(--muted); border-style: dashed; }
 .slot.at { border-color: var(--mine); background: var(--target); }
 .slot.drop { border-color: var(--mine); border-style: solid; background: var(--target); }
-.eq { touch-action: none; user-select: none; -webkit-user-select: none; }
 #ghost {
   position: fixed; left: 0; top: 0; z-index: 10; pointer-events: none; margin: -62px 0 0 -28px;
   background: var(--ink); color: var(--bg); font: 700 22px var(--num); padding: 6px 12px; border-radius: 9px;
@@ -120,10 +120,23 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 #ghost small { font-size: 14px; margin-left: 2px; opacity: .75; }
 .slot small { font-size: 13px; color: var(--muted); }
 .slot i { font: 600 11px var(--display); color: var(--muted); font-style: normal; align-self: flex-start; margin-top: 3px; }
-.eq { margin-left: 4px; color: var(--mine); }
-.cact { display: flex; gap: 6px; }
-.cact button { height: 40px; border-radius: 8px; border: 2px solid var(--ink); background: none; padding: 0 12px; font-weight: 600; }
-.cact .primary { padding: 0 12px; border-color: var(--ink); background: var(--ink); color: var(--bg); flex: 1; }
+.eq { margin-left: auto; height: 40px; border: 0; border-radius: 8px; padding: 0 12px; background: var(--ink); color: var(--bg); font: 600 19px var(--num); touch-action: none; user-select: none; -webkit-user-select: none; }
+.eq:disabled { background: var(--key); color: var(--muted); opacity: 1; }
+.eq small { font-size: 13px; margin-left: 2px; opacity: .8; }
+#status { align-items: center; }
+.nbar { display: inline-flex; gap: 4px; align-items: center; }
+.nbar b { margin-right: 4px; }
+.nbar button { height: 30px; min-width: 34px; border: 2px solid var(--edge); background: var(--card); border-radius: 7px; font: 600 15px var(--num); }
+.nbar [aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.nbar .del { margin-left: 4px; padding: 0 8px; color: var(--wrong); border-color: currentColor; font: 600 13px var(--display); }
+.note { cursor: pointer; outline: none; }
+.note.has { touch-action: none; }
+.note rect { fill: var(--card); stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.note .nl { font: 600 10px var(--display); fill: var(--muted); }
+.note .val { font: 700 17px var(--num); fill: var(--mine); }
+.note.sel rect { fill: var(--sel); }
+.note.target rect, .note.drop rect { fill: var(--target); stroke: var(--mine); stroke-dasharray: none; }
+.note:focus-visible rect { stroke: var(--mine); stroke-width: 2.5; }
 
 /* Circuit drawing */
 .w { fill: none; stroke: var(--wire); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -288,10 +301,9 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
         <button data-op="add" aria-label="Add">+</button>
         <button data-op="sub" aria-label="Subtract">−</button>
         <button data-op="par" aria-label="Parallel resistance">∥</button>
+        <button id="ansBtn" class="ans" hidden></button>
       </div>
-      <p id="opHint"></p>
       <div id="expr" aria-live="polite"></div>
-      <div class="cact"><button id="ansBtn"></button><button id="useBtn" class="primary"></button></div>
     </div>
     <div class="pad" id="pad">
       <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
@@ -349,7 +361,8 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <h4>Tools</h4>
       <dl class="tools">
         <dt><span class="chip">Check</span></dt><dd>Marks wrong values. Nothing is marked until you tap it, unless you turn on Show mistakes right away in Settings.</dd>
-        <dt><span class="chip">Calc</span></dt><dd>Pick ×, ÷, +, −, or ∥. Tap values in the circuit to drop them in, then put the answer in the box you picked.</dd>
+        <dt><span class="chip">Calc</span></dt><dd>Pick ×, ÷, +, −, or ∥, then tap values to drop them in. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Tap an empty box first to send it there. Tap an operation to start over.</dd>
+        <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag notes into boxes or the calculator.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
       </dl>
@@ -531,7 +544,7 @@ const save = () => store.set(P.code, S);
 function openGame(code) {
   P = O.puzzle(code);
   cells = Object.fromEntries(P.cells.map(c => [c.id, c]));
-  S = Object.assign({ vals: {}, meas: {}, wrong: {}, used: 0, solved: false }, store.get(P.code, {}));
+  S = Object.assign({ vals: {}, meas: {}, wrong: {}, used: 0, solved: false, notes: [], nn: 0 }, store.get(P.code, {}));
   sel = (openCells().find(c => !S.vals[c.id] && !S.meas[c.id]) || {}).id || null;
   if (S.solved) sel = null;
   mode = 'input'; C = null;
@@ -586,12 +599,13 @@ function card(part, x, y, qs, i, R, demo) {
   return s + '</g>';
 }
 function circuitSvg(tree, demo) {
-  const out = { w: [], c: [], d: [] };
+  const out = { w: [], c: [], d: [], rects: [], at: {} };
+  const put = (part, x, y) => { out.rects.push({ x, y, w: CW, h: CH }); out.at[part] = { x: x + CW / 2, y: y + CH / 2 }; };
   let n = 1;
   size(tree);
   (function draw(node, x, y, w) {
     const cx = x + w / 2;
-    if (!node.kids) return out.c.push(card(node.name, cx - CW / 2, y, ['V', 'I', 'R'], n++, node.R, demo));
+    if (!node.kids) { put(node.name, cx - CW / 2, y); return out.c.push(card(node.name, cx - CW / 2, y, ['V', 'I', 'R'], n++, node.R, demo)); }
     if (node.t === 'S') {
       let yy = y;
       node.kids.forEach((k, i) => { if (i) { out.w.push(pts(cx, yy, cx, yy + GS)); yy += GS; } draw(k, x, yy, w); yy += k.h; });
@@ -609,22 +623,93 @@ function circuitSvg(tree, demo) {
     }
   })(tree, M + RAIL, M + 16 + CH + GS, Math.max(tree.w, CW));
   const W = Math.max(tree.w, CW), cx = M + RAIL + W / 2, yB = M + 16, y2 = yB + CH + GS + tree.h, y3 = y2 + 18;
+  put('B', cx - CW / 2, yB);
   out.c.unshift(card('B', cx - CW / 2, yB, ['V', 'I', 'R'], 0, 0, demo));
   // Conventional current leaves + at the bottom of the battery, runs down
   // through the circuit, and returns up the left rail.
   out.w.push(pts(cx, yB + CH, cx, yB + CH + GS), pts(cx, y2, cx, y3, M + 4, y3, M + 4, M, cx, M, cx, yB));
-  return { vw: M + RAIL + W + M, vh: y3 + M, html: out.w.join('') + out.d.join('') + out.c.join('') };
+  return { vw: M + RAIL + W + M, vh: y3 + M, rects: out.rects, at: out.at, html: out.w.join('') + out.d.join('') + out.c.join('') };
 }
+let base; // the drawn circuit: size, card rectangles, card centers
 function drawCircuit() {
-  const { vw, vh, html } = circuitSvg(P.tree), svg = $('#svg');
-  svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
-  svg.style.maxWidth = vw * 1.3 + 'px';
-  svg.innerHTML = html;
+  base = circuitSvg(P.tree);
+  const svg = $('#svg');
+  svg.style.maxWidth = base.vw * 1.3 + 'px';
+  svg.innerHTML = base.html + '<g id="notes"></g>';
 }
+
+/* ---------- Notes ---------- */
+// Scratch values (like a combined resistance) that sit on the drawing.
+const NW = 68, NH = 40;
+const isNote = id => typeof id === 'string' && id[0] === 'n';
+const note = id => S.notes.find(n => n.id === id);
+function noteSvg(n) {
+  const cls = ['note', n.t && 'has', mode === 'input' && sel === n.id && 'sel', mode === 'calc' && C.target === n.id && 'target'].filter(Boolean).join(' ');
+  const fit = n.t.length >= 6 ? ` textLength="${NW - 8}"` : '';
+  return `<g class="${cls}" data-note="${n.id}" role="button" tabindex="0" aria-label="Note ${n.label} ${n.t || 'empty'} ${n.u}" transform="translate(${n.x} ${n.y})">` +
+    `<rect width="${NW}" height="${NH}" rx="7"/><text class="nl" x="5" y="12">${n.u}${n.label ? ' ' + n.label : ''}</text>` +
+    `<text class="val" x="${NW / 2}" y="${NH - 8}" text-anchor="middle" lengthAdjust="spacingAndGlyphs"${fit}>${n.t}</text></g>`;
+}
+// Closest spot to (ax, ay) that doesn't cover a card or another note.
+// ponytail: grid scan of the whole drawing, fine at this size.
+function freeSpot(ax, ay) {
+  const busy = base.rects.concat(S.notes.map(n => ({ x: n.x, y: n.y, w: NW, h: NH })));
+  const clear = (x, y) => busy.every(r => x >= r.x + r.w + 4 || x + NW + 4 <= r.x || y >= r.y + r.h + 4 || y + NH + 4 <= r.y);
+  const maxY = Math.max(base.vh, ...S.notes.map(n => n.y + NH)) + NH;
+  let best = { x: M, y: maxY }, bd = Infinity;
+  for (let y = M; y <= maxY; y += 6) for (let x = M; x <= base.vw - NW - M; x += 6) {
+    const d = (x + NW / 2 - ax) ** 2 + (y + NH / 2 - ay) ** 2;
+    if (d < bd && clear(x, y)) { bd = d; best = { x, y }; }
+  }
+  return best;
+}
+function addNote(ax, ay, props) {
+  const at = freeSpot(ax, ay), n = Object.assign({ id: 'n' + ++S.nn, x: at.x, y: at.y, t: '', u: '', label: '' }, props);
+  S.notes.push(n);
+  return n;
+}
+function tapEmpty(e) {
+  if (S.solved || mode === 'meter') return;
+  if (mode === 'calc') C.target = null; else setSel(null);
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform($('#svg').getScreenCTM().inverse());
+  S.notes = S.notes.filter(n => n.t); // drop the empty note you tapped away from
+  const n = addNote(p.x, p.y, {});
+  if (mode === 'calc') C.target = n.id; else sel = n.id;
+  save(); paint();
+}
+function tapNote(id) {
+  if (S.solved) return;
+  if (mode === 'meter') return toast("Notes can't be measured");
+  if (mode === 'calc') {
+    if (note(id).t) fillSlot(id); else C.target = C.target === id ? null : id;
+    return paint();
+  }
+  setSel(id); paint();
+}
+function noteKey(k) {
+  const n = note(sel);
+  let t = n.t;
+  if (k === 'back') t = t.slice(0, -1);
+  else if (k === '.') { if (t.includes('.')) return; t = (t || '0') + '.'; }
+  else { if (t.length >= 7) return; t = t === '0' ? k : t + k; }
+  n.t = t; save(); paint();
+}
+$('#status').onclick = e => {
+  const n = isNote(sel) && note(sel), u = e.target.closest('[data-nu]');
+  if (!n) return;
+  if (u) n.u = n.u === u.dataset.nu ? '' : u.dataset.nu;
+  else if (e.target.closest('[data-ndel]')) { S.notes = S.notes.filter(x => x !== n); sel = null; }
+  else return;
+  save(); paint();
+};
 
 /* ---------- Painting ---------- */
 function paint() {
   const svg = $('#svg');
+  // An empty note disappears once it's no longer selected or targeted.
+  S.notes = S.notes.filter(n => n.t || n.id === sel || (C && C.target === n.id));
+  svg.setAttribute('viewBox', `0 0 ${base.vw} ${Math.max(base.vh, ...S.notes.map(n => n.y + NH + M))}`);
+  $('#notes').innerHTML = S.notes.map(noteSvg).join('');
   svg.classList.toggle('metering', mode === 'meter');
   for (const g of svg.querySelectorAll('.cell')) {
     const id = g.dataset.id, c = cells[id], v = valOf(id), t = g.querySelector('.val');
@@ -649,15 +734,23 @@ function paint() {
   const st = $('#stText');
   if (S.solved) st.innerHTML = '<b>Solved.</b> Current is flowing.';
   else if (mode === 'meter') st.innerHTML = '<b>Meter:</b> tap a box to measure it';
-  else if (mode === 'calc') st.innerHTML = C.target ? `Answer goes to <b>${label(cells[C.target])}</b>` : 'Tap an empty box to send the answer there';
-  else st.innerHTML = sel ? `<b>${label(cells[sel])}</b> (${O.UNIT[cells[sel].q]})` : 'Tap an empty box to fill it in';
+  else if (mode === 'calc') {
+    const d = dest(calcResult());
+    st.innerHTML = !C.slots.some(s => s.t) ? OPS[C.op].hint
+      : d ? `Answer goes to <b>${isNote(d) ? 'your note' : label(cells[d])}</b>` : 'Answer becomes a <b>new note</b>';
+  } else if (isNote(sel)) {
+    const n = note(sel);
+    st.innerHTML = '<span class="nbar"><b>Note</b>' + ['V', 'A', 'Ω'].map(u => `<button data-nu="${u}" aria-pressed="${n.u === u}">${u}</button>`).join('') +
+      '<button class="del" data-ndel>Delete</button></span>';
+  } else st.innerHTML = sel ? `<b>${label(cells[sel])}</b> (${O.UNIT[cells[sel].q]})` : 'Tap an empty box to fill it in';
   $('#stMeter').textContent = P.style === 'P' ? `Measured ${S.used} · par ${P.par}` : '';
   $('#mLeft').textContent = meterLeft();
   const pk = k => $(`[data-k="${k}"]`);
   pk('calc').setAttribute('aria-pressed', mode === 'calc');
   pk('meter').setAttribute('aria-pressed', mode === 'meter');
   pk('meter').disabled = S.solved || meterLeft() <= 0;
-  pk('.').disabled = mode !== 'calc' && P.dp === 0;
+  pk('.').disabled = mode !== 'calc' && P.dp === 0 && !isNote(sel);
+  $('#panel').classList.toggle('calcing', mode === 'calc');
   pk('check').disabled = S.solved;
   pk('calc').disabled = S.solved;
   $('#calc').hidden = mode !== 'calc';
@@ -666,7 +759,7 @@ function paint() {
 
 /* ---------- Input ---------- */
 function setSel(id) {
-  if (settings.instant && sel && sel !== id && S.vals[sel] && !right(sel)) S.wrong[sel] = 1;
+  if (settings.instant && sel && !isNote(sel) && sel !== id && S.vals[sel] && !right(sel)) S.wrong[sel] = 1;
   sel = id;
 }
 function tapCell(id) {
@@ -699,6 +792,7 @@ function key(k) {
   if (mode === 'calc') return calcKey(k);
   if (mode === 'meter') mode = 'input';
   if (!sel) return toast('Tap an empty box first');
+  if (isNote(sel)) return noteKey(k);
   let t = S.vals[sel] || '';
   if (k === 'back') t = t.slice(0, -1);
   else if (k === '.') { if (!P.dp || t.includes('.')) return; t = (t || '0') + '.'; }
@@ -756,19 +850,20 @@ const OPS = {
   par: { many: true, hint: 'Parallel resistance', f: v => 1 / v.reduce((a, b) => a + 1 / b, 0) },
 };
 const SYM = { mul: '×', div: '÷', add: '+', sub: '−' };
-const slot = () => ({ t: '', u: '', src: '' });
+const slot = () => ({ t: '', u: '', src: '', from: '' });
 function toggleCalc() {
   if (mode === 'calc') { mode = 'input'; return paint(); }
   mode = 'calc';
   if (!C) C = { op: 'div', slots: [slot(), slot()], at: 0, target: null, ans: null };
-  if (sel && !locked(sel)) C.target = sel;
   paint();
 }
-function setOp(op) { C.op = op; C.slots = [slot(), slot()]; C.at = 0; paint(); }
+// Tapping an operation, even the current one, starts a fresh calculation.
+function setOp(op) { C.op = op; C.slots = [slot(), slot()]; C.at = 0; C.target = null; paint(); }
 function grow() { if (OPS[C.op].many && C.slots.every(s => s.t)) C.slots.push(slot()); }
 function nextEmpty() { grow(); const i = C.slots.findIndex(s => !s.t); if (i >= 0) C.at = i; }
 function fillSlot(id) {
-  Object.assign(C.slots[C.at], { t: valOf(id), u: O.UNIT[cells[id].q], src: short(cells[id]) });
+  const n = isNote(id) && note(id), c = cells[id];
+  Object.assign(C.slots[C.at], n ? { t: n.t, u: n.u, src: n.label || 'Note', from: id } : { t: valOf(id), u: O.UNIT[c.q], src: short(c), from: id });
   nextEmpty();
 }
 function calcKey(k) {
@@ -800,36 +895,57 @@ function calcResult() {
   const exact = +r.toFixed(9), shown = settings.autoRound ? O.round(exact, P.dp) : +exact.toFixed(4);
   return { shown, fits: Math.abs(shown * 10 ** P.dp - Math.round(shown * 10 ** P.dp)) < 1e-6, unit: unitOf(used.map(s => s.u)) };
 }
+// Where an answer goes: the box or note you picked; else the one empty box on
+// the card all the values came from; else (null) a new note.
+function dest(r) {
+  if (C.target) return C.target;
+  const used = C.slots.filter(s => s.t);
+  const parts = new Set(used.map(s => s.from && !isNote(s.from) ? cells[s.from].part : '-'));
+  if (used.length < 2 || parts.size !== 1 || parts.has('-')) return null;
+  const part = [...parts][0], q = r && { V: 'V', A: 'I', 'Ω': 'R' }[r.unit];
+  const open = ['V', 'I', 'R'].map(x => `${part}.${x}`).filter(id => cells[id] && !locked(id) && !valOf(id));
+  return open.includes(`${part}.${q}`) ? `${part}.${q}` : open.length === 1 ? open[0] : null;
+}
+const fitsDp = t => Math.abs(t * 10 ** P.dp - Math.round(t * 10 ** P.dp)) < 1e-6;
+function place() {
+  const r = calcResult();
+  if (!r) return;
+  const d = dest(r), t = String(r.shown), used = C.slots.filter(s => s.t);
+  if (d && isNote(d)) Object.assign(note(d), { t, u: r.unit || note(d).u });
+  else if (d) {
+    if (!fitsDp(r.shown)) return toast(P.dp ? `Round it to ${P.dp} decimal place${P.dp > 1 ? 's' : ''} first` : 'Round it to a whole number first');
+    S.vals[d] = t; delete S.wrong[d];
+  } else {
+    const pts = used.map(s => s.from && !isNote(s.from) && base.at[cells[s.from].part]).filter(Boolean);
+    const a = pts.length ? { x: pts.reduce((m, p) => m + p.x, 0) / pts.length, y: pts.reduce((m, p) => m + p.y, 0) / pts.length } : base.at.B;
+    const name = used.every(s => s.src) ? used.map(s => s.src).join(C.op === 'par' ? '∥' : SYM[C.op]) : '';
+    addNote(a.x, a.y, { t, u: r.unit, label: name.length <= 10 ? name : '' });
+    toast('Saved as a note');
+  }
+  C.ans = r.shown; C.ansU = r.unit; C.target = null;
+  buzz(8);
+  after();
+}
 function paintCalc() {
   for (const b of document.querySelectorAll('[data-op]')) b.setAttribute('aria-pressed', b.dataset.op === C.op);
-  $('#opHint').textContent = OPS[C.op].hint;
   const chip = (s, i) => `<button class="slot${i === C.at ? ' at' : ''}${s.t ? '' : ' empty'}" data-slot="${i}" aria-label="Value ${i + 1}">` +
     (s.src ? `<i>${s.src}</i>` : '') + (s.t || '?') + (s.u ? `<small>${s.u}</small>` : '') + '</button>';
   const r = calcResult();
   $('#expr').innerHTML = (C.op === 'par'
     ? '<span>1 ÷ (</span>' + C.slots.map((s, i) => '<span>1/</span>' + chip(s, i)).join('<span>+</span>') + '<span>)</span>'
     : C.slots.map(chip).join(`<span>${SYM[C.op]}</span>`)) +
-    `<span class="eq">= ${r ? r.shown + (r.unit ? ' ' + r.unit : '') : '?'}</span>`;
+    `<button class="eq"${r ? '' : ' disabled'} aria-label="Place the answer">= ${r ? r.shown + (r.unit ? `<small>${r.unit}</small>` : '') : '?'}</button>`;
   const ans = $('#ansBtn');
   ans.hidden = C.ans == null;
   ans.textContent = `Ans ${C.ans}`;
-  const use = $('#useBtn');
-  use.disabled = !(C.target && r && r.fits);
-  use.textContent = !C.target ? 'Pick a box for the answer'
-    : r && !r.fits ? 'Too many decimals, round it'
-    : `Put ${r ? r.shown : '?'} in ${label(cells[C.target])}`;
 }
 $('#ops').onclick = e => { const b = e.target.closest('[data-op]'); if (b) setOp(b.dataset.op); };
-$('#expr').onclick = e => { const b = e.target.closest('[data-slot]'); if (b) { C.at = +b.dataset.slot; paint(); } };
-$('#ansBtn').onclick = () => { Object.assign(C.slots[C.at], { t: String(C.ans), u: C.ansU || '', src: 'Ans' }); nextEmpty(); paint(); };
-$('#useBtn').onclick = () => {
-  const r = calcResult();
-  if (!r || !C.target || locked(C.target)) return;
-  S.vals[C.target] = String(r.shown); delete S.wrong[C.target];
-  C.ans = r.shown; C.ansU = r.unit;
-  buzz(8);
-  after();
+$('#expr').onclick = e => {
+  if (e.target.closest('.eq')) return place();
+  const b = e.target.closest('[data-slot]');
+  if (b) { C.at = +b.dataset.slot; paint(); }
 };
+$('#ansBtn').onclick = () => { Object.assign(C.slots[C.at], { t: String(C.ans), u: C.ansU || '', src: 'Ans', from: '' }); nextEmpty(); paint(); };
 
 /* ---------- Wiring ---------- */
 /* ---------- Drag a value to copy it ---------- */
@@ -842,6 +958,8 @@ function dragSource(el) {
     const c = cells[g.dataset.id];
     return { t: valOf(c.id), u: O.UNIT[c.q], src: short(c), from: c.id };
   }
+  const nt = el.closest && el.closest('.note');
+  if (nt && note(nt.dataset.note).t) { const n = note(nt.dataset.note); return { t: n.t, u: n.u, src: n.label || 'Note', from: n.id }; }
   if (mode === 'calc' && el.closest && el.closest('.eq')) {
     const r = calcResult();
     if (r && r.fits) return { t: String(r.shown), u: r.unit, src: 'Ans' };
@@ -852,6 +970,8 @@ function dropTarget(x, y) {
   const el = document.elementFromPoint(x, y);
   const g = el && el.closest('.cell[data-id]'), s = el && el.closest('[data-slot]');
   if (g && !locked(g.dataset.id) && g.dataset.id !== drag.v.from) return g;
+  const nt = el && el.closest('.note');
+  if (nt && nt.dataset.note !== drag.v.from) return nt;
   return s && mode === 'calc' ? s : null;
 }
 function endDrag(drop) {
@@ -865,12 +985,14 @@ function endDrag(drop) {
   if (!drop || !over) return;
   buzz(8);
   if (over.dataset.slot) {
-    Object.assign(C.slots[+over.dataset.slot], { t: v.t, u: v.u, src: v.src });
+    Object.assign(C.slots[+over.dataset.slot], { t: v.t, u: v.u, src: v.src, from: v.from || '' });
     C.at = +over.dataset.slot;
     nextEmpty();
     return paint();
   }
+  if (over.dataset.note) { const n = note(over.dataset.note); Object.assign(n, { t: v.t, u: v.u || n.u }); save(); return paint(); }
   const id = over.dataset.id;
+  if (!fitsDp(+v.t)) return toast('Too many decimals for this puzzle');
   S.vals[id] = v.t; delete S.wrong[id];
   if (mode === 'calc') C.target = id; else { mode = 'input'; setSel(id); }
   after();
@@ -902,10 +1024,15 @@ addEventListener('pointercancel', () => endDrag(false));
 // A finished drag also fires a click; don't treat it as a tap.
 addEventListener('click', e => { if (noClick) { noClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
 
-$('#svg').addEventListener('click', e => { const g = e.target.closest('.cell'); if (g) tapCell(g.dataset.id); });
+$('#board').addEventListener('click', e => {
+  const g = e.target.closest('.cell[data-id]'), nt = e.target.closest('.note');
+  if (g) tapCell(g.dataset.id);
+  else if (nt) tapNote(nt.dataset.note);
+  else if (!e.target.closest('.card')) tapEmpty(e);
+});
 $('#svg').addEventListener('keydown', e => {
-  const g = e.target.closest('.cell');
-  if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); tapCell(g.dataset.id); }
+  const g = e.target.closest('.cell'), nt = e.target.closest('.note');
+  if ((g || nt) && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); g ? tapCell(g.dataset.id) : tapNote(nt.dataset.note); }
 });
 $('#pad').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (b) key(b.dataset.k); });
 addEventListener('keydown', e => {
