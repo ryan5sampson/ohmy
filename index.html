@@ -184,6 +184,41 @@ dialog .rule { font: 600 16px var(--num); letter-spacing: .02em; }
 .opt b { font-weight: 600; }
 .opt small { color: var(--muted); font-size: 14px; }
 .opt input { grid-row: 1 / 3; grid-column: 2; width: 24px; height: 24px; align-self: center; accent-color: var(--mine); }
+#help { width: min(460px, calc(100% - 24px)); height: min(760px, calc(100% - 32px)); padding: 0; }
+#help[open] { display: flex; flex-direction: column; }
+.htop { display: flex; align-items: center; gap: 8px; padding: 12px 8px 0 16px; }
+.htabs { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--key); padding: 4px; border-radius: 10px; }
+.htabs button { border: 0; background: none; padding: 8px 4px; border-radius: 7px; font-weight: 600; font-size: 15px; white-space: nowrap; }
+.htabs [aria-selected="true"] { background: var(--card); box-shadow: 0 1px 0 var(--edge); }
+.hpane { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px 20px; display: grid; align-content: start; gap: 12px; }
+.hpane p, .hpane ul, .hpane ol, .hpane h3, .hpane h4 { margin: 0; }
+.hpane h4 { font: 700 17px var(--display); margin-top: 8px; }
+#learn.hpane { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.slides { flex: 1; min-height: 0; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.slides::-webkit-scrollbar { display: none; }
+.slide { flex: 0 0 100%; scroll-snap-align: start; overflow-y: auto; padding: 16px 20px; display: grid; align-content: start; gap: 12px; }
+.slide ul, .slide ol { display: grid; gap: 8px; }
+.snav { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--edge); }
+.snav button { width: 96px; padding: 10px; }
+.ghost { background: none; border: 2px solid var(--ink); border-radius: 10px; font-weight: 600; }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--edge); transition: background .2s; }
+.dots i.on { background: var(--ink); }
+.linkish { justify-self: start; background: none; border: 0; padding: 0; color: var(--mine); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.rrow { display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid var(--edge); }
+svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
+.demo .cell { cursor: default; }
+.rule.big { font-size: 30px; text-align: center; }
+.eg { text-wrap: balance; font: 600 17px var(--num); background: var(--cell); border-radius: 8px; padding: 8px 12px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: center; }
+.unit { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: var(--cell); font: 700 22px var(--num); }
+.tri { width: 180px; margin: 0 auto; display: block; }
+.tri path { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+.tri text { font: 700 30px var(--num); fill: var(--ink); text-anchor: middle; }
+.steps { padding-left: 22px; font: 600 16px var(--num); }
+.tools { display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; margin: 0; }
+.tools dd { margin: 0; font-size: 15px; }
+.chip { display: inline-block; min-width: 56px; text-align: center; background: var(--key); border-radius: 6px; padding: 3px 8px; font: 600 14px var(--display); }
 #winStat { font: 700 32px/1.1 var(--num); margin: 4px 0; }
 </style>
 </head>
@@ -270,20 +305,126 @@ dialog .rule { font: 600 16px var(--num); letter-spacing: .02em; }
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="ghost" hidden></div>
 
-<dialog id="help">
-  <h3>How to play</h3>
-  <p>Every box is a value in the circuit. Fill them all in using four rules.</p>
-  <ul>
-    <li><span class="rule">V = I × R</span> for each resistor, and for any group of them.</li>
-    <li>Series, one path: the current is the same everywhere. Voltages add up, and so do resistances.</li>
-    <li>Parallel, side-by-side branches: every branch gets the same voltage. Currents add up. <span class="rule">R = 1 ÷ (1/R₁ + 1/R₂ …)</span></li>
-    <li>The battery card holds the whole circuit's totals: the voltage across it, the total current, and the total resistance.</li>
-  </ul>
-  <p>Drag any value onto another box, or onto a calculator slot, to copy it there.</p>
-  <p><b>Calc</b> picks an operation. Tap values in the circuit to drop them in, then put the result in the box you chose.</p>
-  <p><b>Meter</b> measures one box for you. Normal puzzles give you 3 as hints. Meter puzzles start with too few clues: measure the fewest boxes you can. Par is the fewest possible.</p>
-  <p>Easy uses whole numbers, Medium one decimal place, and Hard two. Tap <b>Check</b> when you want to know how you're doing.</p>
-  <form method="dialog" class="dact"><button class="primary">Got it</button></form>
+<dialog id="help" aria-label="How to play">
+  <div class="htop">
+    <div class="htabs" role="tablist">
+      <button role="tab" data-tab="rules" aria-selected="true">Rules</button>
+      <button role="tab" data-tab="learn" aria-selected="false">Learn circuits</button>
+    </div>
+    <form method="dialog"><button class="icon" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+  </div>
+
+  <section id="rules" class="hpane">
+    <h3>How to play</h3>
+    <p>Fill in every empty box. Each card is one part of the circuit, with its voltage (V), current (A), and resistance (Ω). Every puzzle can be solved by logic alone.</p>
+    <button class="linkish" id="toLearn">New to circuits? Learn the basics</button>
+    <div class="rrow">
+      <div data-demo="ohmRule"></div>
+      <h4>Ohm's law</h4>
+      <p class="rule">V = I × R</p>
+      <p>Works on every card, and on any group of cards. Here, 12 ÷ 2 = 6 Ω.</p>
+    </div>
+    <div class="rrow">
+      <div data-demo="series"></div>
+      <h4>Series: one path</h4>
+      <p>The current is the same through each part. Voltages add: 4 + 8 = 12 V. Resistances add: 2 + 4 = 6 Ω.</p>
+    </div>
+    <div class="rrow">
+      <div data-demo="parallel"></div>
+      <h4>Parallel: side by side</h4>
+      <p>Every branch gets the same voltage. Currents add: 1 + 2 = 3 A. Resistance: 1 ÷ (1/6 + 1/3) = 2 Ω.</p>
+    </div>
+    <p>The <b>battery card</b> holds the whole circuit's totals: its voltage, total current, and total resistance.</p>
+    <div id="toolsBlock">
+      <h4>Tools</h4>
+      <dl class="tools">
+        <dt><span class="chip">Check</span></dt><dd>Marks wrong values. Nothing is marked until you tap it, unless you turn on Show mistakes right away in Settings.</dd>
+        <dt><span class="chip">Calc</span></dt><dd>Pick ×, ÷, +, −, or ∥. Tap values in the circuit to drop them in, then put the answer in the box you picked.</dd>
+        <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
+        <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
+      </dl>
+      <h4>Puzzles</h4>
+      <p>Easy uses whole numbers, Medium one decimal place, and Hard two. Classic gives you the battery voltage and every resistance. Mixed gives you any mix of values. Meter puzzles start with too few clues, so you measure the fewest boxes you can and try to match par.</p>
+    </div>
+    <form method="dialog"><button class="primary">Got it</button></form>
+  </section>
+
+  <section id="learn" class="hpane" hidden>
+    <div class="slides" id="slides">
+      <article class="slide">
+        <h3>Every circuit has three numbers</h3>
+        <div data-demo="flow"></div>
+        <div class="kv">
+          <span class="unit">V</span><p><b>Voltage</b>, in volts, is the push. A battery supplies it, like a pump pushing water through a pipe.</p>
+          <span class="unit">A</span><p><b>Current</b>, in amps, is how much electricity flows, like the amount of water moving through the pipe.</p>
+          <span class="unit">Ω</span><p><b>Resistance</b>, in ohms, is how hard a part is to push through, like a narrow section of pipe.</p>
+        </div>
+        <p>The moving dashes are current: out of the battery, through the resistor, and back.</p>
+      </article>
+      <article class="slide">
+        <h3>Ohm's law connects them</h3>
+        <svg class="tri" viewBox="0 0 200 116" role="img" aria-label="Ohm's law triangle: V on top, I times R below">
+          <path d="M100 6L194 110H6Z"/><path d="M48 68H152M100 68V110"/>
+          <text x="100" y="56">V</text><text x="68" y="100">I</text><text x="132" y="100">R</text>
+        </svg>
+        <p class="rule big">V = I × R</p>
+        <p>Know any two and you can find the third. Cover the one you want in the triangle: I = V ÷ R, and R = V ÷ I.</p>
+        <div data-demo="ohm"></div>
+        <p class="eg">12 V across 6 Ω → 12 ÷ 6 = 2 A</p>
+        <p>More push means more current. More resistance means less.</p>
+      </article>
+      <article class="slide">
+        <h3>Series: one path</h3>
+        <div data-demo="series"></div>
+        <ul>
+          <li>There's only one way around, so the same current flows through every part: 2 A everywhere.</li>
+          <li>Each part uses up some of the voltage. The drops add up to the battery's: 4 V + 8 V = 12 V.</li>
+          <li>Resistances add: 2 Ω + 4 Ω = 6 Ω. Check it with Ohm's law: 12 V ÷ 6 Ω = 2 A.</li>
+        </ul>
+      </article>
+      <article class="slide">
+        <h3>Parallel: side by side</h3>
+        <div data-demo="parallel"></div>
+        <ul>
+          <li>Each branch connects across the same two points, so each one gets the full 6 V.</li>
+          <li>The current splits between branches and adds back up: 1 A + 2 A = 3 A.</li>
+          <li>More paths make it easier to get through, so the total is less than any one branch: 1 ÷ (1/6 + 1/3) = 2 Ω.</li>
+          <li>Shortcut: two equal branches halve the resistance. Two 6 Ω resistors side by side act like 3 Ω.</li>
+        </ul>
+      </article>
+      <article class="slide">
+        <h3>Treat a group as one resistor</h3>
+        <div data-demo="nested"></div>
+        <ul>
+          <li>R2 and R3 are in parallel, so together they act like one 2 Ω resistor.</li>
+          <li>That group is in series with R1: 2 + 2 = 4 Ω total.</li>
+          <li>12 V through 4 Ω makes 3 A. R1 uses 6 V, which leaves 6 V for the group to split into 1 A and 2 A.</li>
+        </ul>
+      </article>
+      <article class="slide">
+        <h3>Solving an Ohmy puzzle</h3>
+        <div data-demo="puzzle"></div>
+        <p>Dark numbers are clues. You fill in the rest, one step at a time. Here's one order that works:</p>
+        <ol class="steps">
+          <li>R2 ∥ R3: 1 ÷ (1/6 + 1/3) = 2 Ω</li>
+          <li>Total resistance: 2 + 2 = 4 Ω</li>
+          <li>Total current: 12 ÷ 4 = 3 A</li>
+          <li>R1: 3 × 2 = 6 V, leaving 12 − 6 = 6 V</li>
+          <li>R2: 6 ÷ 6 = 1 A. R3: 6 ÷ 3 = 2 A</li>
+        </ol>
+        <p>No guessing needed. If you get stuck, look for a card or group where you already know two of the three numbers.</p>
+      </article>
+      <article class="slide">
+        <h3>Before you play</h3>
+        <div data-clone="toolsBlock"></div>
+      </article>
+    </div>
+    <div class="snav">
+      <button class="ghost" id="sPrev">Back</button>
+      <div class="dots" id="dots" aria-hidden="true"></div>
+      <button class="primary" id="sNext">Next</button>
+    </div>
+  </section>
 </dialog>
 
 <dialog id="settings">
@@ -387,7 +528,7 @@ function openGame(code) {
   $('#home').hidden = true; $('#game').hidden = false;
   $('#svg').classList.toggle('live', S.solved);
   paint();
-  if (!store.get('seenHelp', false)) { store.set('seenHelp', true); $('#help').showModal(); }
+  if (!store.get('seenHelp', false)) { store.set('seenHelp', true); openHelp(); }
 }
 
 /* ---------- Circuit drawing ---------- */
@@ -409,9 +550,11 @@ function size(n) {
   if (n.t === 'S') { n.w = Math.max(...w); n.h = h.reduce((a, b) => a + b) + GS * (h.length - 1); }
   else { n.w = w.reduce((a, b) => a + b) + GP * (w.length - 1); n.h = Math.max(...h) + 2 * T; }
 }
-function card(part, x, y, qs, i, R) {
+// demo: optional {id: text} for help pictures. '12' is a clue, '*2' an answer, '?' the box to find.
+function card(part, x, y, qs, i, R, demo) {
   const cw = (CW - 8) / qs.length;
-  let s = `<g class="card" data-part="${part}" style="--d:${i * 90}ms" transform="translate(${x} ${y})"><rect class="cardbg" width="${CW}" height="${CH}" rx="10"/>`;
+  const dr = demo && demo[part + '.R'];
+  let s = `<g class="card${dr && dr !== '?' ? ' known' : ''}" data-part="${part}" style="--d:${i * 90}ms" transform="translate(${x} ${y})"><rect class="cardbg" width="${CW}" height="${CH}" rx="10"/>`;
   if (part === 'B') {
     s += `<path class="sym" d="M10 6v12M15 9v6M5 12h5M15 12h5"/><text class="lbl" x="26" y="16">Battery</text>`;
   } else {
@@ -421,19 +564,20 @@ function card(part, x, y, qs, i, R) {
       b.map((c, j) => `<rect x="${11 + j * 5}" y="1" width="3" height="10" fill="${c}"/>`).join('') + `<rect x="29" y="1" width="3" height="10" fill="#c9a227"/></g>`;
   }
   qs.forEach((q, j) => {
-    s += `<g class="cell" data-id="${part}.${q}" role="button" tabindex="0" transform="translate(${6 + j * cw} 22)">` +
+    const id = `${part}.${q}`, d = demo ? demo[id] || '' : '';
+    s += `<g ${demo ? `class="cell${d === '?' ? ' sel' : d && d[0] !== '*' ? ' given' : ''}"` : `class="cell" data-id="${id}" role="button" tabindex="0"`} transform="translate(${6 + j * cw} 22)">` +
       `<rect width="${cw - 4}" height="38" rx="6"/>${part === 'B' && q === 'R' ? '<text class="u" x="5" y="11" textLength="29" lengthAdjust="spacingAndGlyphs">Ω total</text>' : `<text class="u" x="5" y="11">${O.UNIT[q]}</text>`}` +
-      `<text class="val" x="${(cw - 4) / 2}" y="31" text-anchor="middle"></text></g>`;
+      `<text class="val" x="${(cw - 4) / 2}" y="31" text-anchor="middle">${d === '?' ? '' : d.replace('*', '')}</text></g>`;
   });
   return s + '</g>';
 }
-function drawCircuit() {
+function circuitSvg(tree, demo) {
   const out = { w: [], c: [], d: [] };
   let n = 1;
-  size(P.tree);
+  size(tree);
   (function draw(node, x, y, w) {
     const cx = x + w / 2;
-    if (!node.kids) return out.c.push(card(node.name, cx - CW / 2, y, ['V', 'I', 'R'], n++, node.R));
+    if (!node.kids) return out.c.push(card(node.name, cx - CW / 2, y, ['V', 'I', 'R'], n++, node.R, demo));
     if (node.t === 'S') {
       let yy = y;
       node.kids.forEach((k, i) => { if (i) { out.w.push(pts(cx, yy, cx, yy + GS)); yy += GS; } draw(k, x, yy, w); yy += k.h; });
@@ -449,16 +593,19 @@ function drawCircuit() {
         xx += k.w + GP;
       });
     }
-  })(P.tree, M + RAIL, M + 16 + CH + GS, Math.max(P.tree.w, CW));
-  const W = Math.max(P.tree.w, CW), cx = M + RAIL + W / 2, yB = M + 16, y2 = yB + CH + GS + P.tree.h, y3 = y2 + 18;
-  out.c.unshift(card('B', cx - CW / 2, yB, ['V', 'I', 'R'], 0));
+  })(tree, M + RAIL, M + 16 + CH + GS, Math.max(tree.w, CW));
+  const W = Math.max(tree.w, CW), cx = M + RAIL + W / 2, yB = M + 16, y2 = yB + CH + GS + tree.h, y3 = y2 + 18;
+  out.c.unshift(card('B', cx - CW / 2, yB, ['V', 'I', 'R'], 0, 0, demo));
   // Conventional current leaves + at the bottom of the battery, runs down
   // through the circuit, and returns up the left rail.
   out.w.push(pts(cx, yB + CH, cx, yB + CH + GS), pts(cx, y2, cx, y3, M + 4, y3, M + 4, M, cx, M, cx, yB));
-  const vw = M + RAIL + W + M, vh = y3 + M, svg = $('#svg');
+  return { vw: M + RAIL + W + M, vh: y3 + M, html: out.w.join('') + out.d.join('') + out.c.join('') };
+}
+function drawCircuit() {
+  const { vw, vh, html } = circuitSvg(P.tree), svg = $('#svg');
   svg.setAttribute('viewBox', `0 0 ${vw} ${vh}`);
   svg.style.maxWidth = vw * 1.3 + 'px';
-  svg.innerHTML = out.w.join('') + out.d.join('') + out.c.join('');
+  svg.innerHTML = html;
 }
 
 /* ---------- Painting ---------- */
@@ -672,7 +819,7 @@ $('#useBtn').onclick = () => {
 // Targets: any box you can edit, or a calculator slot.
 let drag = null, noClick = false;
 function dragSource(el) {
-  const g = el.closest && el.closest('.cell');
+  const g = el.closest && el.closest('.cell[data-id]');
   if (g && valOf(g.dataset.id)) {
     const c = cells[g.dataset.id];
     return { t: valOf(c.id), u: O.UNIT[c.q], src: short(c), from: c.id };
@@ -685,7 +832,7 @@ function dragSource(el) {
 }
 function dropTarget(x, y) {
   const el = document.elementFromPoint(x, y);
-  const g = el && el.closest('.cell'), s = el && el.closest('[data-slot]');
+  const g = el && el.closest('.cell[data-id]'), s = el && el.closest('[data-slot]');
   if (g && !locked(g.dataset.id) && g.dataset.id !== drag.v.from) return g;
   return s && mode === 'calc' ? s : null;
 }
@@ -749,7 +896,49 @@ addEventListener('keydown', e => {
   if (k) { e.preventDefault(); key(k); }
 });
 $('#backBtn').onclick = () => { location.hash = ''; };
-for (const b of ['#helpBtn', '#helpBtn2']) $(b).onclick = () => $('#help').showModal();
+for (const b of ['#helpBtn', '#helpBtn2']) $(b).onclick = () => openHelp();
+
+/* ---------- How to play ---------- */
+const res = (name, R) => ({ name, R });
+const pic = (svg, vw, vh, cls, label) => `<svg class="demo ${cls}" viewBox="0 0 ${vw} ${vh}" style="max-width:${vw}px" role="img" aria-label="${label}">${svg}</svg>`;
+const demoCircuit = (tree, demo, label, cls = '') => { const c = circuitSvg(tree, demo); return pic(c.html, c.vw, c.vh, cls, label); };
+const demoCard = (demo, label) => pic(card('R1', 2, 2, ['V', 'I', 'R'], 0, 6, demo), CW + 4, CH + 4, '', label);
+const NESTED = () => ({ t: 'S', kids: [res('R1', 2), { t: 'P', kids: [res('R2', 6), res('R3', 3)] }] });
+const DEMOS = {
+  ohmRule: () => demoCard({ 'R1.V': '12', 'R1.I': '2', 'R1.R': '?' }, 'A resistor card with 12 volts, 2 amps, and its resistance to find'),
+  ohm: () => demoCard({ 'R1.V': '12', 'R1.I': '*2', 'R1.R': '6' }, 'A resistor card: 12 volts, 6 ohms, 2 amps'),
+  flow: () => demoCircuit(res('R1', 6), { 'B.V': '12', 'B.I': '2', 'B.R': '6', 'R1.V': '12', 'R1.I': '2', 'R1.R': '6' }, 'A battery and one resistor with current flowing', 'live'),
+  series: () => demoCircuit({ t: 'S', kids: [res('R1', 2), res('R2', 4)] },
+    { 'B.V': '12', 'B.I': '2', 'B.R': '6', 'R1.V': '4', 'R1.I': '2', 'R1.R': '2', 'R2.V': '8', 'R2.I': '2', 'R2.R': '4' }, 'Two resistors in series'),
+  parallel: () => demoCircuit({ t: 'P', kids: [res('R1', 6), res('R2', 3)] },
+    { 'B.V': '6', 'B.I': '3', 'B.R': '2', 'R1.V': '6', 'R1.I': '1', 'R1.R': '6', 'R2.V': '6', 'R2.I': '2', 'R2.R': '3' }, 'Two resistors in parallel'),
+  nested: () => demoCircuit(NESTED(), { 'B.V': '12', 'B.I': '3', 'B.R': '4', 'R1.V': '6', 'R1.I': '3', 'R1.R': '2',
+    'R2.V': '6', 'R2.I': '1', 'R2.R': '6', 'R3.V': '6', 'R3.I': '2', 'R3.R': '3' }, 'R1 in series with R2 and R3 in parallel, fully solved'),
+  puzzle: () => demoCircuit(NESTED(), { 'B.V': '12', 'B.R': '?', 'R1.R': '2', 'R2.R': '6', 'R3.R': '3' }, 'The same circuit as a puzzle, with only the battery voltage and resistances given'),
+};
+for (const el of document.querySelectorAll('[data-demo]')) el.innerHTML = DEMOS[el.dataset.demo]();
+for (const el of document.querySelectorAll('[data-clone]')) { const c = $('#' + el.dataset.clone).cloneNode(true); c.removeAttribute('id'); el.replaceWith(c); }
+const slides = $('#slides'), nSlides = slides.children.length;
+$('#dots').innerHTML = '<i></i>'.repeat(nSlides);
+const slideAt = () => Math.round(slides.scrollLeft / Math.max(1, slides.clientWidth));
+function slideDots() {
+  const i = slideAt();
+  [...$('#dots').children].forEach((d, j) => d.classList.toggle('on', j === i));
+  $('#sPrev').disabled = i === 0;
+  $('#sNext').textContent = i === nSlides - 1 ? 'Play' : 'Next';
+}
+function helpTab(t) {
+  for (const b of document.querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', b.dataset.tab === t);
+  $('#rules').hidden = t !== 'rules';
+  $('#learn').hidden = t !== 'learn';
+  if (t === 'learn') slideDots();
+}
+function openHelp(t = 'rules') { helpTab(t); $('#help').showModal(); }
+document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => helpTab(b.dataset.tab));
+$('#toLearn').onclick = () => { slides.scrollLeft = 0; helpTab('learn'); };
+slides.addEventListener('scroll', slideDots, { passive: true });
+$('#sPrev').onclick = () => slides.scrollBy({ left: -slides.clientWidth, behavior: 'smooth' });
+$('#sNext').onclick = () => slideAt() === nSlides - 1 ? $('#help').close() : slides.scrollBy({ left: slides.clientWidth, behavior: 'smooth' });
 for (const b of ['#setBtn', '#setBtn2']) $(b).onclick = () => {
   $('#setInstant').checked = settings.instant; $('#setRound').checked = settings.autoRound;
   $('#settings').showModal();
