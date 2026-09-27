@@ -108,6 +108,14 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .slot { min-width: 48px; height: 40px; padding: 0 8px; border: 2px solid var(--edge); background: var(--cell); border-radius: 8px; font: 600 19px var(--num); display: inline-flex; align-items: center; gap: 3px; }
 .slot.empty { color: var(--muted); border-style: dashed; }
 .slot.at { border-color: var(--mine); background: var(--target); }
+.slot.drop { border-color: var(--mine); border-style: solid; background: var(--target); }
+.eq { touch-action: none; user-select: none; -webkit-user-select: none; }
+#ghost {
+  position: fixed; left: 0; top: 0; z-index: 10; pointer-events: none; margin: -62px 0 0 -28px;
+  background: var(--ink); color: var(--bg); font: 700 22px var(--num); padding: 6px 12px; border-radius: 9px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / .3); white-space: nowrap;
+}
+#ghost small { font-size: 14px; margin-left: 2px; opacity: .75; }
 .slot small { font-size: 13px; color: var(--muted); }
 .slot i { font: 600 11px var(--display); color: var(--muted); font-style: normal; align-self: flex-start; margin-top: 3px; }
 .eq { margin-left: 4px; color: var(--mine); }
@@ -130,6 +138,8 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .cell .val.long { font-size: 16px; }
 .cell .val.xlong { font-size: 13.5px; }
 .cell { cursor: pointer; outline: none; }
+.cell.has { touch-action: none; cursor: grab; }
+.cell.drop rect { fill: var(--target); stroke: var(--mine); stroke-width: 2.5; }
 .cell.given { cursor: default; }
 .cell.given .val { fill: var(--ink); }
 .cell.meas .val { fill: var(--meas); }
@@ -256,6 +266,7 @@ dialog .rule { font: 600 16px var(--num); letter-spacing: .02em; }
 </main>
 
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="ghost" hidden></div>
 
 <dialog id="help">
   <h3>How to play</h3>
@@ -266,6 +277,7 @@ dialog .rule { font: 600 16px var(--num); letter-spacing: .02em; }
     <li>Parallel, side-by-side branches: every branch gets the same voltage. Currents add up. <span class="rule">R = 1 ÷ (1/R₁ + 1/R₂ …)</span></li>
     <li>The battery's voltage is across the whole circuit, and its current is the total current.</li>
   </ul>
+  <p>Drag any value onto another box, or onto a calculator slot, to copy it there.</p>
   <p><b>Calc</b> picks an operation. Tap values in the circuit to drop them in, then put the result in the box you chose.</p>
   <p><b>Meter</b> measures one box for you. Normal puzzles give you 3 as hints. Meter puzzles start with too few clues: measure the fewest boxes you can. Par is the fewest possible.</p>
   <p>Easy uses whole numbers, Medium one decimal place, and Hard two. Tap <b>Check</b> when you want to know how you're doing.</p>
@@ -456,6 +468,7 @@ function paint() {
     t.classList.toggle('long', v.length === 5);
     t.classList.toggle('xlong', v.length > 5);
     g.classList.toggle('given', c.given);
+    g.classList.toggle('has', !!v);
     g.classList.toggle('meas', !!S.meas[id]);
     g.classList.toggle('wrong', !!S.wrong[id]);
     g.classList.toggle('sel', mode === 'input' && sel === id);
@@ -651,6 +664,76 @@ $('#useBtn').onclick = () => {
 };
 
 /* ---------- Wiring ---------- */
+/* ---------- Drag a value to copy it ---------- */
+// Sources: any box with a value, or the calculator's result.
+// Targets: any box you can edit, or a calculator slot.
+let drag = null, noClick = false;
+function dragSource(el) {
+  const g = el.closest && el.closest('.cell');
+  if (g && valOf(g.dataset.id)) {
+    const c = cells[g.dataset.id];
+    return { t: valOf(c.id), u: O.UNIT[c.q], src: c.part === 'B' ? 'Bat' : c.part, from: c.id };
+  }
+  if (mode === 'calc' && el.closest && el.closest('.eq')) {
+    const r = calcResult();
+    if (r && r.fits) return { t: String(r.shown), u: r.unit, src: 'Ans' };
+  }
+  return null;
+}
+function dropTarget(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const g = el && el.closest('.cell'), s = el && el.closest('[data-slot]');
+  if (g && !locked(g.dataset.id) && g.dataset.id !== drag.v.from) return g;
+  return s && mode === 'calc' ? s : null;
+}
+function endDrag(drop) {
+  if (!drag) return;
+  const { v, on, over } = drag;
+  drag = null;
+  $('#ghost').hidden = true;
+  if (over) over.classList.remove('drop');
+  if (!on) return;
+  noClick = true;
+  if (!drop || !over) return;
+  buzz(8);
+  if (over.dataset.slot) {
+    Object.assign(C.slots[+over.dataset.slot], { t: v.t, u: v.u, src: v.src });
+    C.at = +over.dataset.slot;
+    nextEmpty();
+    return paint();
+  }
+  const id = over.dataset.id;
+  S.vals[id] = v.t; delete S.wrong[id];
+  if (mode === 'calc') C.target = id; else { mode = 'input'; setSel(id); }
+  after();
+}
+addEventListener('pointerdown', e => {
+  noClick = false;
+  if (!e.isPrimary || $('#game').hidden || !S || S.solved) return;
+  const v = dragSource(e.target);
+  if (v) drag = { v, x: e.clientX, y: e.clientY, on: false, over: null };
+});
+addEventListener('pointermove', e => {
+  if (!drag || !e.isPrimary) return;
+  if (!drag.on) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+    drag.on = true;
+    $('#ghost').innerHTML = drag.v.t + (drag.v.u ? `<small>${drag.v.u}</small>` : '');
+    $('#ghost').hidden = false;
+  }
+  $('#ghost').style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+  const t = dropTarget(e.clientX, e.clientY);
+  if (t !== drag.over) {
+    if (drag.over) drag.over.classList.remove('drop');
+    if (t) t.classList.add('drop');
+    drag.over = t;
+  }
+});
+addEventListener('pointerup', e => { if (e.isPrimary) endDrag(true); });
+addEventListener('pointercancel', () => endDrag(false));
+// A finished drag also fires a click; don't treat it as a tap.
+addEventListener('click', e => { if (noClick) { noClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
+
 $('#svg').addEventListener('click', e => { const g = e.target.closest('.cell'); if (g) tapCell(g.dataset.id); });
 $('#svg').addEventListener('keydown', e => {
   const g = e.target.closest('.cell');
