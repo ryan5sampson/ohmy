@@ -219,6 +219,10 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 .tools { display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; margin: 0; }
 .tools dd { margin: 0; font-size: 15px; }
 .chip { display: inline-block; min-width: 56px; text-align: center; background: var(--key); border-radius: 6px; padding: 3px 8px; font: 600 14px var(--display); }
+.ccode { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.ccode span { display: grid; gap: 2px; justify-items: center; font: 600 13px var(--num); }
+.ccode small { font: 500 11px var(--text); color: var(--muted); }
+.ccode i { width: 100%; height: 16px; border-radius: 4px; border: 1px solid var(--edge); }
 #winStat { font: 700 32px/1.1 var(--num); margin: 4px 0; }
 </style>
 </head>
@@ -334,6 +338,12 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <h4>Parallel: side by side</h4>
       <p>Every branch gets the same voltage. Currents add: 1 + 2 = 3 A. Resistance: 1 ÷ (1/6 + 1/3) = 2 Ω.</p>
     </div>
+    <div class="rrow">
+      <h4>Resistor color code</h4>
+      <div class="ccode" id="ccode"></div>
+      <p>The first two bands are digits and the third is the multiplier. Gold multiplies by 0.1 and silver by 0.01. The last, separate gold band is tolerance, so skip it. Yellow, violet, gold is 47 × 0.1 = 4.7 Ω.</p>
+      <p>Turn on Color-code resistances in Settings to practice reading them.</p>
+    </div>
     <p>The <b>battery card</b> holds the whole circuit's totals: its voltage, total current, and total resistance.</p>
     <div id="toolsBlock">
       <h4>Tools</h4>
@@ -430,6 +440,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 <dialog id="settings">
   <h3>Settings</h3>
   <label class="opt"><b>Show mistakes right away</b><small>Marks a wrong value as soon as you move to another box.</small><input type="checkbox" id="setInstant"></label>
+  <label class="opt"><b>Color-code resistances</b><small>Given resistances show only as resistor color bands. Read them and type the value in.</small><input type="checkbox" id="setBands"></label>
   <label class="opt"><b>Auto-round</b><small>Rounds calculator results to the puzzle's decimal places.</small><input type="checkbox" id="setRound"></label>
   <form method="dialog" class="dact"><button class="primary">Done</button></form>
 </dialog>
@@ -461,7 +472,7 @@ const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem('ohmy:' + k)) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem('ohmy:' + k, JSON.stringify(v)); } catch {} },
 };
-const settings = Object.assign({ instant: false, autoRound: true }, store.get('settings', {}));
+const settings = Object.assign({ instant: false, autoRound: true, colorCode: false }, store.get('settings', {}));
 const today = () => new Date().toLocaleDateString('en-CA');
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
@@ -505,12 +516,15 @@ const go = code => { location.hash = code; };
 /* ---------- Game state ---------- */
 let P, S, cells, sel, mode, C;
 const fmt = x => String(O.round(x, P.dp));
-const valOf = id => cells[id].given ? fmt(cells[id].value) : S.vals[id] || '';
+// With color-coding on, a given resistor value shows only as bands, and you type it in.
+const coded = id => settings.colorCode && cells[id].given && cells[id].q === 'R' && cells[id].part !== 'B';
+const given = id => cells[id].given && !coded(id);
+const valOf = id => given(id) ? fmt(cells[id].value) : S.vals[id] || '';
 const right = id => { const v = valOf(id); return v !== '' && Math.abs(parseFloat(v) - cells[id].value) < 1e-6; };
-const openCells = () => P.cells.filter(c => !c.given);
+const openCells = () => P.cells.filter(c => !given(c.id));
 const label = c => c.id === 'B.R' ? 'Total resistance' : `${c.part === 'B' ? 'Battery' : c.part} ${O.Q[c.q]}`;
 const short = c => c.id === 'B.R' ? 'Total' : c.part === 'B' ? 'Bat' : c.part;
-const locked = id => cells[id].given || S.meas[id] || S.solved;
+const locked = id => given(id) || S.meas[id] || S.solved;
 const meterLeft = () => P.meter - S.used;
 const save = () => store.set(P.code, S);
 
@@ -560,14 +574,14 @@ function card(part, x, y, qs, i, R, demo) {
   } else {
     s += `<path class="sym" d="M6 12h4l2-5 3 10 3-10 3 10 2-5h4"/><text class="lbl" x="34" y="16">${part}</text>`;
     const b = bands(R);
-    if (b) s += `<g class="bands" transform="translate(${CW - 50} 6)"><path class="sym" d="M0 6h8M34 6h8"/><rect class="res" x="7" y="1" width="28" height="10" rx="4"/>` +
-      b.map((c, j) => `<rect x="${11 + j * 5}" y="1" width="3" height="10" fill="${c}"/>`).join('') + `<rect x="29" y="1" width="3" height="10" fill="#c9a227"/></g>`;
+    if (b) s += `<g class="bands" transform="translate(${CW - 70} 3)"><path class="sym" d="M0 7h8M56 7h8"/><rect class="res" x="7" y="0" width="50" height="14" rx="5"/>` +
+      b.map((c, j) => `<rect x="${14 + j * 8}" y="0" width="5" height="14" fill="${c}"/>`).join('') + `<rect x="46" y="0" width="5" height="14" fill="#c9a227"/></g>`;
   }
   qs.forEach((q, j) => {
     const id = `${part}.${q}`, d = demo ? demo[id] || '' : '';
     s += `<g ${demo ? `class="cell${d === '?' ? ' sel' : d && d[0] !== '*' ? ' given' : ''}"` : `class="cell" data-id="${id}" role="button" tabindex="0"`} transform="translate(${6 + j * cw} 22)">` +
       `<rect width="${cw - 4}" height="38" rx="6"/>${part === 'B' && q === 'R' ? '<text class="u" x="5" y="11" textLength="29" lengthAdjust="spacingAndGlyphs">Ω total</text>' : `<text class="u" x="5" y="11">${O.UNIT[q]}</text>`}` +
-      `<text class="val" x="${(cw - 4) / 2}" y="31" text-anchor="middle">${d === '?' ? '' : d.replace('*', '')}</text></g>`;
+      `<text class="val" x="${(cw - 4) / 2}" y="31" text-anchor="middle" lengthAdjust="spacingAndGlyphs">${d === '?' ? '' : d.replace('*', '')}</text></g>`;
   });
   return s + '</g>';
 }
@@ -617,13 +631,16 @@ function paint() {
     t.textContent = v;
     t.classList.toggle('long', v.length === 5);
     t.classList.toggle('xlong', v.length > 5);
-    g.classList.toggle('given', c.given);
+    // Squeeze long values to fit the box, whatever font loaded.
+    if (v.length >= 5) t.setAttribute('textLength', g.querySelector('rect').getAttribute('width') - 6);
+    else t.removeAttribute('textLength');
+    g.classList.toggle('given', given(id));
     g.classList.toggle('has', !!v);
     g.classList.toggle('meas', !!S.meas[id]);
     g.classList.toggle('wrong', !!S.wrong[id]);
     g.classList.toggle('sel', mode === 'input' && sel === id);
     g.classList.toggle('target', mode === 'calc' && C.target === id);
-    g.setAttribute('aria-label', `${label(c)}, ${v ? v + ' ' + O.UNIT[c.q] : 'empty'}${c.given ? ', given' : ''}`);
+    g.setAttribute('aria-label', `${label(c)}, ${v ? v + ' ' + O.UNIT[c.q] : coded(id) ? 'read the color bands' : 'empty'}${given(id) ? ', given' : ''}`);
   }
   for (const g of svg.querySelectorAll('.card')) {
     const r = cells[g.dataset.part + '.R'];
@@ -656,6 +673,7 @@ function tapCell(id) {
   if (S.solved) return;
   const c = cells[id];
   if (mode === 'meter') {
+    if (coded(id)) return toast('Read its color bands instead');
     if (c.given || S.meas[id]) return toast('That value is already known');
     return measure(id);
   }
@@ -916,6 +934,8 @@ const DEMOS = {
     'R2.V': '6', 'R2.I': '1', 'R2.R': '6', 'R3.V': '6', 'R3.I': '2', 'R3.R': '3' }, 'R1 in series with R2 and R3 in parallel, fully solved'),
   puzzle: () => demoCircuit(NESTED(), { 'B.V': '12', 'B.R': '?', 'R1.R': '2', 'R2.R': '6', 'R3.R': '3' }, 'The same circuit as a puzzle, with only the battery voltage and resistances given'),
 };
+$('#ccode').innerHTML = ['black', 'brown', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray', 'white'].map((n, d) => `<span><i style="background:${BAND[d]}"></i>${d}<small>${n}</small></span>`).join('') +
+  '<span><i style="background:#c9a227"></i>×0.1<small>gold</small></span><span><i style="background:#b8b8b8"></i>×0.01<small>silver</small></span>';
 for (const el of document.querySelectorAll('[data-demo]')) el.innerHTML = DEMOS[el.dataset.demo]();
 for (const el of document.querySelectorAll('[data-clone]')) { const c = $('#' + el.dataset.clone).cloneNode(true); c.removeAttribute('id'); el.replaceWith(c); }
 const slides = $('#slides'), nSlides = slides.children.length;
@@ -940,11 +960,11 @@ slides.addEventListener('scroll', slideDots, { passive: true });
 $('#sPrev').onclick = () => slides.scrollBy({ left: -slides.clientWidth, behavior: 'smooth' });
 $('#sNext').onclick = () => slideAt() === nSlides - 1 ? $('#help').close() : slides.scrollBy({ left: slides.clientWidth, behavior: 'smooth' });
 for (const b of ['#setBtn', '#setBtn2']) $(b).onclick = () => {
-  $('#setInstant').checked = settings.instant; $('#setRound').checked = settings.autoRound;
+  $('#setInstant').checked = settings.instant; $('#setRound').checked = settings.autoRound; $('#setBands').checked = settings.colorCode;
   $('#settings').showModal();
 };
 $('#settings').onchange = () => {
-  settings.instant = $('#setInstant').checked; settings.autoRound = $('#setRound').checked;
+  settings.instant = $('#setInstant').checked; settings.autoRound = $('#setRound').checked; settings.colorCode = $('#setBands').checked;
   store.set('settings', settings);
   if (P && !$('#game').hidden) paint();
 };
