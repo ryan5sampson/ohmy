@@ -93,6 +93,15 @@ button:disabled { cursor: default; opacity: .4; }
 #rPad .sw { border: 2px solid var(--muted); }
 #rPad .enter { grid-column: span 2; background: var(--ink); color: var(--bg); font: 600 17px var(--display); }
 #rPad .wide3 { grid-column: span 3; }
+.rcard { overflow-y: auto; min-height: 0; }
+.rcard .linkish, .rpane > .linkish { justify-self: center; text-align: center; }
+.rwhy ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; font-size: 15px; }
+.blabel { font: 700 16px var(--num); fill: var(--ink); text-anchor: middle; }
+.blabel.on { fill: var(--mine); }
+.prac #rTime { font: 600 20px var(--display); align-self: center; color: var(--muted); }
+.prac #rScore::after { content: ' right'; }
+#rushLearn { align-content: start; }
+#rushLearn .rq { margin: 0; }
 .rbig { font: 700 64px/1 var(--num); text-align: center; }
 #rushEnd { text-align: center; }
 .ctab { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -353,7 +362,15 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <p>Read or build as many resistors as you can in 60 seconds.</p>
     <p>Some show you the color bands: type the value and press Enter. Others give you the value: tap the colors, then press Enter. When there's a tolerance, pick it too.</p>
     <p>The color chart is always there, but a resistor you peek at doesn't score.</p>
-    <button class="primary" id="rushStart">Start</button>
+    <button class="primary" id="rushStart">Start the 60-second rush</button>
+    <button class="ghost" id="rushPractice">Practice, no timer</button>
+    <button class="linkish" id="rushLearnBtn">New to color codes? Learn to read them</button>
+  </section>
+  <section id="rushLearn" class="rpane" hidden>
+    <svg class="rsvg" id="lSvg" viewBox="0 0 300 114" role="img"></svg>
+    <h3 class="rq" id="lTitle"></h3>
+    <p id="lText"></p>
+    <div class="snav"><button class="ghost" id="lPrev">Back</button><div class="dots" id="lDots" aria-hidden="true"></div><button class="primary" id="lNext">Next</button></div>
   </section>
   <section id="rushPlay" class="rpane" hidden>
     <div class="rstat"><span id="rTime">60</span><span id="rScore">0</span></div>
@@ -361,6 +378,8 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <p class="rq" id="rQ"></p>
       <svg class="rsvg" id="rSvg" viewBox="0 0 300 80" role="img"></svg>
       <p class="rans" id="rAns"></p>
+      <div class="rwhy" id="rWhy" hidden></div>
+      <button class="linkish" id="rShowMe" hidden>Walk me through it</button>
     </div>
     <div class="tols" id="rTols"></div>
     <div class="pad" id="rPad"></div>
@@ -1227,10 +1246,29 @@ function rushQuestion() {
   return q;
 }
 // bands: up to 3 colors (missing ones draw as empty slots); tol: color, null for none, '' for an empty slot
-function resistorSvg(bands, tol) {
-  const band = (x, c) => c ? `<rect class="band" x="${x}" y="15" width="14" height="50" fill="${c}"/>` : `<rect class="slot0" x="${x}" y="16" width="14" height="48"/>`;
+// o.labels: text under each band (needs a 114-tall viewBox; the multiplier sits lower so it clears the digits); o.hi: the one band to spotlight.
+function resistorSvg(bands, tol, o = {}) {
+  const xs = [92, 120, 148, 196], dim = i => o.hi != null && o.hi !== i ? ' opacity=".25"' : '';
+  const band = (i, c) => c ? `<rect class="band" x="${xs[i]}" y="15" width="14" height="50" fill="${c}"${dim(i)}/>` : `<rect class="slot0" x="${xs[i]}" y="16" width="14" height="48"/>`;
   return `<path class="lead" d="M0 40h60M240 40h60"/><rect class="rbody" x="58" y="14" width="184" height="52" rx="24"/>` +
-    [0, 1, 2].map(i => band(92 + i * 28, bands[i])).join('') + (tol === null ? '' : band(196, tol));
+    [0, 1, 2].map(i => band(i, bands[i])).join('') + (tol === null ? '' : band(3, tol)) +
+    (o.labels || []).map((t, i) => t ? `<text class="blabel${o.hi === i ? ' on' : ''}" x="${xs[i] + 7}" y="${i === 2 ? 108 : 88}">${t}</text>` : '').join('');
+}
+const colorName = c => c === GOLD ? 'gold' : c === SILVER ? 'silver' : COLOR_NAMES[BAND.indexOf(c)];
+const plain = v => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+const MULT = { '-2': '×0.01', '-1': '×0.1', 0: '×1', 1: '×10', 2: '×100', 3: '×1k', 4: '×10k', 5: '×100k', 6: '×1M' };
+const bandLabels = q => [Math.floor(q.n / 10), q.n % 10, MULT[q.m], q.tol ? `±${q.tol}%` : ''];
+// The answer in words, band by band.
+function walkthrough(q) {
+  const [a, b, c] = q.bands, m = MULT[q.m].slice(1), mult = q.m < 0 ? m : plain(10 ** q.m);
+  const zeros = q.m > 0 ? `, so add ${q.m} zero${q.m > 1 ? 's' : ''}` : q.m === 0 ? ', so no zeros' : '';
+  const steps = q.mode === 'build' ? [`${q.value >= 1000 ? `${ohms(q.value)} is ${plain(q.value)} Ω, which` : `${plain(q.value)} Ω`} is ${q.n} × ${mult}.`] : [];
+  return steps.concat([
+    `First band: ${colorName(a)} is ${Math.floor(q.n / 10)}.`,
+    `Second band: ${colorName(b)} is ${q.n % 10}. The two digits make ${q.n}.`,
+    `Third band: ${colorName(c)} means ×${mult}${zeros}. ${q.n} × ${mult} = ${plain(q.value)} Ω${q.value >= 1000 ? `, or ${ohms(q.value)}` : ''}.`,
+    q.tol ? `Tolerance band: ${colorName(TOL[q.tol])} is ±${q.tol}%.` : "No tolerance band, so it's ±20%.",
+  ]);
 }
 function rushPad(mode) {
   const pad = $('#rPad');
@@ -1246,7 +1284,8 @@ function rushPad(mode) {
 }
 function rushPaint() {
   const q = R.q;
-  $('#rQ').innerHTML = (q.mode === 'read' ? "What's this resistor?" : `Build ${q.text}`) + (R.peek ? '<small>Peeked, so this one won\'t score</small>' : '');
+  if (R.reveal) return;
+  $('#rQ').innerHTML = (q.mode === 'read' ? "What's this resistor?" : `Build ${q.text}`) + (R.peek && !R.practice ? '<small>Peeked, so this one won\'t score</small>' : '');
   $('#rSvg').innerHTML = q.mode === 'read' ? resistorSvg(q.bands, q.tol ? TOL[q.tol] : null)
     : resistorSvg(R.bands, q.tol ? (R.tol ? TOL[R.tol] : '') : null);
   $('#rSvg').setAttribute('aria-label', q.mode === 'read' ? 'Resistor bands: ' + q.bands.map(c => c === GOLD ? 'gold' : c === SILVER ? 'silver' : COLOR_NAMES[BAND.indexOf(c)]).join(', ') + (q.tol ? ', tolerance band' : '') : 'Resistor to color in');
@@ -1257,11 +1296,15 @@ function rushPaint() {
   $('#rScore').textContent = R.score;
 }
 function rushNext() {
-  R.q = rushQuestion(); R.input = ''; R.bands = []; R.tol = null; R.peek = false; R.lock = false;
+  R.q = rushQuestion(); R.input = ''; R.bands = []; R.tol = null; R.peek = false; R.lock = false; R.reveal = false; R.shown = false;
   $('#rCard').className = 'rcard';
+  $('#rSvg').setAttribute('viewBox', '0 0 300 80');
+  $('#rWhy').hidden = true;
+  $('#rShowMe').hidden = !R.practice;
   rushPad(R.q.mode); rushPaint();
 }
 function rushKey(k) {
+  if (R && R.reveal) { if (k === 'enter') rushNext(); return; }
   if (!R || R.lock || R.done) return;
   const q = R.q;
   if (k === 'enter') return rushSubmit();
@@ -1290,7 +1333,8 @@ function rushSubmit() {
   } else ok = R.bands.every((c, i) => c === q.bands[i]);
   ok = ok && (!q.tol || R.tol === q.tol);
   R.tries++;
-  if (ok && !R.peek) R.score++;
+  if (ok && !R.peek && !R.shown) R.score++;
+  if (R.practice) { buzz(ok ? 10 : [30, 40, 30]); return rushReveal(ok); }
   R.lock = true;
   $('#rCard').className = 'rcard ' + (ok ? 'ok' : 'bad');
   if (ok) { buzz(10); return setTimeout(rushNext, 250); }
@@ -1299,6 +1343,23 @@ function rushSubmit() {
   else $('#rAns').textContent = q.text;
   $('#rQ').innerHTML = q.mode === 'read' ? 'It was' : `This is ${q.text}`;
   setTimeout(rushNext, 1100);
+}
+// Practice: show the answer labeled band by band, and wait for Next.
+function rushReveal(ok) {
+  const q = R.q;
+  R.reveal = true; R.lock = true;
+  $('#rCard').className = 'rcard' + (ok === true ? ' ok' : ok === false ? ' bad' : '');
+  $('#rQ').textContent = ok === true ? 'Right!' : ok === false ? "Not quite. Here's how it reads" : "Here's how it reads";
+  $('#rSvg').setAttribute('viewBox', '0 0 300 114');
+  $('#rSvg').innerHTML = resistorSvg(q.bands, q.tol ? TOL[q.tol] : null, { labels: bandLabels(q) });
+  $('#rAns').hidden = false;
+  $('#rAns').textContent = q.text;
+  $('#rWhy').innerHTML = '<ol>' + walkthrough(q).map(t => `<li>${t}</li>`).join('') + '</ol>';
+  $('#rWhy').hidden = false;
+  $('#rShowMe').hidden = true;
+  $('#rTols').hidden = true;
+  const e = $('#rPad [data-r="enter"]');
+  if (e) e.textContent = 'Next';
 }
 function rushTick() {
   const left = Math.max(0, RUSH_SECONDS - Math.floor((Date.now() - R.t0) / 1000));
@@ -1315,13 +1376,42 @@ function rushEnd() {
     (R.score >= best && R.score ? ' New best!' : ` Your best is ${best}.`) + (R.peeks ? ` You peeked ${R.peeks} time${R.peeks > 1 ? 's' : ''}.` : '');
   rushShow('End');
 }
-function rushShow(which) { for (const w of ['Intro', 'Play', 'End']) $('#rush' + w).hidden = w !== which; }
-function rushStart() {
+function rushShow(which) { for (const w of ['Intro', 'Learn', 'Play', 'End']) $('#rush' + w).hidden = w !== which; }
+function rushStart(practice) {
   stopRush();
-  R = { q: null, score: 0, tries: 0, peeks: 0, t0: Date.now(), done: false };
-  R.timer = setInterval(rushTick, 200);
-  rushShow('Play'); rushNext(); rushTick();
+  R = { q: null, score: 0, tries: 0, peeks: 0, t0: Date.now(), done: false, practice };
+  $('#rushPlay').classList.toggle('prac', practice);
+  rushShow('Play'); rushNext();
+  if (practice) $('#rTime').textContent = 'Practice';
+  else { R.timer = setInterval(rushTick, 200); rushTick(); }
 }
+
+// The color code, one band at a time.
+const LEARN = [
+  { t: 'Find the start', b: [4, 7, 2], tol: 5, p: 'Turn the resistor so the bands bunch up on the left. The band sitting apart on the right is the tolerance. Read the rest from left to right.' },
+  { t: 'First band: first digit', b: [4, 7, 2], tol: 5, hi: 0, labels: ['4'], p: 'Every color stands for a digit from 0 to 9. Yellow is 4.' },
+  { t: 'Second band: second digit', b: [4, 7, 2], tol: 5, hi: 1, labels: ['4', '7'], p: 'Violet is 7. Together, the first two bands make 47.' },
+  { t: 'Third band: multiplier', b: [4, 7, 2], tol: 5, hi: 2, labels: ['4', '7', '×100'], p: 'The third band says how many zeros to add. Red is 2, so add two zeros: 47 × 100 = 4,700 Ω, which is 4.7 kΩ.' },
+  { t: 'Last band: tolerance', b: [4, 7, 2], tol: 5, hi: 3, labels: ['4', '7', '×100', '±5%'], p: 'Gold means the real resistance can be up to 5% off. Silver is ±10%, brown is ±1%, and red is ±2%. No tolerance band at all means ±20%.' },
+  { t: 'Values under 10 Ω', b: [5, 0, 'g'], tol: null, labels: ['5', '0', '×0.1'], p: 'Gold and silver can also be the multiplier. Gold is ×0.1 and silver is ×0.01. Green, black, gold is 50 × 0.1 = 5 Ω.' },
+  { t: 'Building one', b: [3, 3, 1], tol: 10, labels: ['3', '3', '×10', '±10%'], p: "To build 330 Ω ±10%, start with the first two digits: 3 and 3, so orange and orange. 330 is 33 with one zero, so the multiplier is brown. ±10% is silver." },
+  { t: 'k and M', b: [2, 2, 2], tol: 5, labels: ['2', '2', '×100', '±5%'], p: 'k means thousand and M means million. 2.2 kΩ is 2,200 Ω, which is 22 with two zeros: red, red, red. When you type a value, 2.2k and 2200 both work.' },
+];
+let li = 0;
+function learnPaint() {
+  const s = LEARN[li];
+  $('#lSvg').innerHTML = resistorSvg(s.b.map(d => d === 'g' ? GOLD : BAND[d]), s.tol ? TOL[s.tol] : null, { labels: s.labels, hi: s.hi });
+  $('#lSvg').setAttribute('aria-label', 'Resistor: ' + s.b.map(d => d === 'g' ? 'gold' : COLOR_NAMES[d]).join(', ') + (s.tol ? ', then a tolerance band' : ''));
+  $('#lTitle').textContent = s.t;
+  $('#lText').textContent = s.p;
+  $('#lDots').innerHTML = LEARN.map((_, j) => `<i${j === li ? ' class="on"' : ''}></i>`).join('');
+  $('#lPrev').disabled = li === 0;
+  $('#lNext').textContent = li === LEARN.length - 1 ? 'Practice' : 'Next';
+}
+$('#rushLearnBtn').onclick = () => { li = 0; learnPaint(); rushShow('Learn'); };
+$('#lPrev').onclick = () => { li--; learnPaint(); };
+$('#lNext').onclick = () => { if (li === LEARN.length - 1) return rushStart(true); li++; learnPaint(); };
+$('#rShowMe').onclick = () => { if (R && !R.reveal) { R.shown = true; rushReveal(null); } };
 function stopRush() { if (R) { clearInterval(R.timer); R = null; } }
 function showRush() {
   $('#home').hidden = true; $('#game').hidden = true; $('#rush').hidden = false;
@@ -1335,12 +1425,13 @@ $('#rTols').onclick = e => { const b = e.target.closest('[data-tol]'); if (b && 
 $('#rPad').onclick = e => { const b = e.target.closest('[data-r]'); if (b) rushKey(b.dataset.r); };
 $('#rushBtn').onclick = () => { location.hash = 'rush'; };
 $('#rushBack').onclick = $('#rushHome').onclick = () => { location.hash = ''; };
-$('#rushStart').onclick = $('#rushAgain').onclick = rushStart;
+$('#rushStart').onclick = $('#rushAgain').onclick = () => rushStart(false);
+$('#rushPractice').onclick = () => rushStart(true);
 $('#cheatRows').innerHTML = COLOR_NAMES.map((n, d) => [n, BAND[d], d, ['×1', '×10', '×100', '×1k', '×10k', '×100k', '×1M'][d] || '', { 1: '±1%', 2: '±2%' }[d] || ''])
   .concat([['gold', GOLD, '', '×0.1', '±5%'], ['silver', SILVER, '', '×0.01', '±10%']])
   .map(([n, c, d, m, t]) => `<tr><td><i style="background:${c}"></i>${n}</td><td>${d}</td><td>${m}</td><td>${t}</td></tr>`).join('');
 $('#cheatBtn').onclick = () => {
-  if (R && !R.done && !R.peek) { R.peek = true; R.peeks++; rushPaint(); }
+  if (R && !R.done && !R.peek && !R.practice) { R.peek = true; R.peeks++; rushPaint(); }
   $('#cheat').showModal();
 };
 addEventListener('keydown', e => {
