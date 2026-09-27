@@ -80,7 +80,7 @@ button:disabled { cursor: default; opacity: .4; }
 .rstat { display: flex; justify-content: space-between; font: 700 34px/1 var(--num); font-variant-numeric: tabular-nums; }
 .rstat #rTime.low { color: var(--wrong); }
 .rstat #rScore::after { content: ' pts'; font-size: 16px; color: var(--muted); }
-.rcard { display: grid; align-content: center; gap: 10px; background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 14px; transition: background .15s; }
+.rcard { display: flex; flex-direction: column; gap: 10px; background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 14px; transition: background .15s; }
 .rcard.ok { background: color-mix(in srgb, var(--live) 30%, var(--card)); }
 .rcard.bad { background: color-mix(in srgb, var(--wrong) 20%, var(--card)); }
 .rq { font: 700 22px var(--display); text-align: center; text-wrap: balance; }
@@ -94,6 +94,12 @@ button:disabled { cursor: default; opacity: .4; }
 #rPad .enter { grid-column: span 2; background: var(--ink); color: var(--bg); font: 600 17px var(--display); }
 #rPad .wide3 { grid-column: span 3; }
 .rcard { overflow-y: auto; min-height: 0; }
+/* Center the card's content, but scroll from the top when it doesn't fit. */
+.rcard::before, .rcard::after { content: ''; margin: auto; }
+.rcard > * { flex-shrink: 0; }
+/* While the answer is explained, the keypad shrinks to just Next. */
+.revealing #rPad > :not([data-r="enter"]) { display: none; }
+.revealing #rPad [data-r="enter"] { grid-column: 1 / -1; }
 .rcard .linkish, .rpane > .linkish { justify-self: center; text-align: center; }
 .rwhy ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; font-size: 15px; }
 .blabel { font: 700 16px var(--num); fill: var(--ink); text-anchor: middle; }
@@ -1298,6 +1304,7 @@ function rushPaint() {
 function rushNext() {
   R.q = rushQuestion(); R.input = ''; R.bands = []; R.tol = null; R.peek = false; R.lock = false; R.reveal = false; R.shown = false;
   $('#rCard').className = 'rcard';
+  $('#rushPlay').classList.remove('revealing');
   $('#rSvg').setAttribute('viewBox', '0 0 300 80');
   $('#rWhy').hidden = true;
   $('#rShowMe').hidden = !R.practice;
@@ -1348,6 +1355,7 @@ function rushSubmit() {
 function rushReveal(ok) {
   const q = R.q;
   R.reveal = true; R.lock = true;
+  $('#rushPlay').classList.add('revealing');
   $('#rCard').className = 'rcard' + (ok === true ? ' ok' : ok === false ? ' bad' : '');
   $('#rQ').textContent = ok === true ? 'Right!' : ok === false ? "Not quite. Here's how it reads" : "Here's how it reads";
   $('#rSvg').setAttribute('viewBox', '0 0 300 114');
