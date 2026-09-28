@@ -122,6 +122,15 @@ button:disabled { cursor: default; opacity: .4; }
 #rPad .sw { font: 700 17px var(--num); }
 #rushLearn { align-content: start; }
 #rushLearn .rq { margin: 0; }
+.seg.two { grid-template-columns: 1fr 1fr; }
+.tols.five { grid-template-columns: repeat(5, 1fr); }
+.tols.five button { font-size: 14px; gap: 4px; }
+#cColors { display: grid; gap: 8px; }
+#cPad .ctl { font: 600 15px var(--display); }
+.cval { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.cval input, .cval select { font: 600 20px var(--num); padding: 10px 12px; border: 2px solid var(--edge); border-radius: 10px; background: var(--card); color: var(--ink); min-width: 0; }
+.cval #cTol { grid-column: 1 / -1; font-size: 17px; }
+#cNote { min-height: 0; margin: 0; text-align: center; }
 .rbig { font: 700 64px/1 var(--num); text-align: center; }
 #rushEnd { text-align: center; }
 .ctab { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -384,6 +393,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <p>The color chart is always there, but a resistor you peek at doesn't score.</p>
     <button class="primary" id="rushStart">Start the 60-second rush</button>
     <button class="ghost" id="rushPractice">Practice, no timer</button>
+    <button class="ghost" id="rushCheckBtn">Resistor checker</button>
     <button class="linkish" id="rushLearnBtn">New to color codes? Learn to read them</button>
   </section>
   <section id="rushLearn" class="rpane" hidden>
@@ -391,6 +401,24 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <h3 class="rq" id="lTitle"></h3>
     <p id="lText"></p>
     <div class="snav"><button class="ghost" id="lPrev">Back</button><div class="dots" id="lDots" aria-hidden="true"></div><button class="primary" id="lNext">Next</button></div>
+  </section>
+  <section id="rushCheck" class="rpane" hidden>
+    <fieldset class="seg two" aria-label="Checker mode">
+      <label><input type="radio" name="ckm" id="ckmC" value="c" checked><span>Colors → value</span></label>
+      <label><input type="radio" name="ckm" id="ckmV" value="v"><span>Value → colors</span></label>
+    </fieldset>
+    <svg class="rsvg big" id="cSvg" viewBox="0 0 320 174" role="img" aria-live="polite"></svg>
+    <p class="rans" id="cOut"></p>
+    <p class="note" id="cNote"></p>
+    <div id="cColors">
+      <div class="tols five" id="cTols"></div>
+      <div class="pad" id="cPad"></div>
+    </div>
+    <div id="cValue" class="cval" hidden>
+      <input id="cIn" inputmode="decimal" autocomplete="off" aria-label="Resistance" placeholder="4.7">
+      <select id="cUnit" aria-label="Unit"><option value="1">Ω</option><option value="1000" selected>kΩ</option><option value="1000000">MΩ</option></select>
+      <select id="cTol" aria-label="Tolerance"><option value="">No band ±20%</option><option value="1">±1%</option><option value="2">±2%</option><option value="5" selected>±5%</option><option value="10">±10%</option></select>
+    </div>
   </section>
   <section id="rushPlay" class="rpane" hidden>
     <div class="rstat"><span id="rTime">60</span><label class="rhint"><input type="checkbox" id="rHint"> Show numbers</label><span id="rScore">0</span></div>
@@ -1274,7 +1302,7 @@ function resistorSvg(bands, tol) {
 }
 const colorName = c => c === GOLD ? 'gold' : c === SILVER ? 'silver' : COLOR_NAMES[BAND.indexOf(c)];
 const plain = v => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
-const MULT = { '-2': '×0.01', '-1': '×0.1', 0: '×1', 1: '×10', 2: '×100', 3: '×1k', 4: '×10k', 5: '×100k', 6: '×1M' };
+const MULT = { '-2': '×0.01', '-1': '×0.1', 0: '×1', 1: '×10', 2: '×100', 3: '×1k', 4: '×10k', 5: '×100k', 6: '×1M', 7: '×10M', 8: '×100M', 9: '×1G' };
 const bandLabels = q => [Math.floor(q.n / 10), q.n % 10, MULT[q.m], q.tol ? `±${q.tol}%` : '±20%'];
 // A big resistor with a callout box under each band saying what the band is
 // for, what it's worth, and its color. values: [digit, digit, multiplier,
@@ -1427,7 +1455,7 @@ function rushEnd() {
     (R.score >= best && R.score ? ' New best!' : ` Your best is ${best}.`) + (R.peeks ? ` You peeked ${R.peeks} time${R.peeks > 1 ? 's' : ''}.` : '');
   rushShow('End');
 }
-function rushShow(which) { for (const w of ['Intro', 'Learn', 'Play', 'End']) $('#rush' + w).hidden = w !== which; }
+function rushShow(which) { for (const w of ['Intro', 'Learn', 'Check', 'Play', 'End']) $('#rush' + w).hidden = w !== which; }
 function rushStart(practice) {
   stopRush();
   R = { q: null, score: 0, tries: 0, peeks: 0, t0: Date.now(), done: false, practice };
@@ -1480,7 +1508,68 @@ $('#rHint').onchange = () => {
 };
 $('#rPad').onclick = e => { const b = e.target.closest('[data-r]'); if (b) rushKey(b.dataset.r); };
 $('#rushBtn').onclick = () => { location.hash = 'rush'; };
-$('#rushBack').onclick = $('#rushHome').onclick = () => { location.hash = ''; };
+$('#rushHome').onclick = () => { location.hash = ''; };
+// Back steps out to the Rush start screen first, then home.
+$('#rushBack').onclick = () => { if ($('#rushIntro').hidden) { stopRush(); showRush(); } else location.hash = ''; };
+
+/* ---------- Resistor checker ---------- */
+// Tap colors to read a value, or type a value to see its colors.
+const CK = { bands: [], tol: 0 };
+const bandsOf = (n, m) => [BAND[Math.floor(n / 10)], BAND[n % 10], multColor(m)];
+function checkerPaint() {
+  const byColor = $('#ckmC').checked;
+  $('#cColors').hidden = !byColor; $('#cValue').hidden = byColor;
+  let bands = [], tol = 0, n, m, note = '';
+  if (byColor) {
+    bands = CK.bands; tol = CK.tol;
+    if (bands.length === 3) {
+      n = BAND.indexOf(bands[0]) * 10 + BAND.indexOf(bands[1]);
+      m = bands[2] === GOLD ? -1 : bands[2] === SILVER ? -2 : BAND.indexOf(bands[2]);
+    } else note = `Tap the ${['first', 'second', 'third'][bands.length]} band's color.`;
+    for (const b of $('#cTols').children) b.setAttribute('aria-pressed', +b.dataset.t === tol);
+  } else {
+    tol = +$('#cTol').value;
+    const v = parseFloat($('#cIn').value) * +$('#cUnit').value;
+    if (v > 0) {
+      m = Math.floor(Math.log10(v) + 1e-9) - 1; n = Math.round(v / 10 ** m);
+      if (n === 100) { n = 10; m++; }
+      if (m < -2 || m > 9) { note = 'Standard color codes cover 0.1 Ω to 99 GΩ.'; n = undefined; }
+      else {
+        bands = bandsOf(n, m);
+        if (Math.abs(n * 10 ** m - v) > v * 1e-9) note = `Color codes use two digits, so that rounds to ${ohms(n * 10 ** m)}.`;
+      }
+    } else note = 'Type a resistance.';
+  }
+  const ok = n !== undefined, v = ok ? n * 10 ** m : 0;
+  const values = [bands[0] ? BAND.indexOf(bands[0]) : '', bands[1] ? BAND.indexOf(bands[1]) : '', bands[2] ? MULT[m] : '', tol ? `±${tol}%` : '±20%'];
+  $('#cSvg').innerHTML = bandDiagram(bands, tol ? TOL[tol] : null, values);
+  $('#cSvg').setAttribute('aria-label', bands.length ? 'Bands: ' + bands.map(colorName).join(', ') + (tol ? `, ${colorName(TOL[tol])} tolerance` : '') : 'No bands yet');
+  $('#cOut').textContent = ok ? `${ohms(v)} ${tol ? `±${tol}%` : '±20%'}` : '';
+  $('#cNote').textContent = note;
+}
+function showChecker() {
+  const sw = (k, c, name, num) => `<button class="sw" data-c="${k}" aria-label="${name}" style="background:${c};color:${lightText(c) ? '#fff' : '#111'}">${num}</button>`;
+  $('#cPad').innerHTML = BAND.map((c, d) => sw(d, c, COLOR_NAMES[d], d)).join('') + sw('g', GOLD, 'gold', '×0.1') + sw('s', SILVER, 'silver', '×0.01') +
+    '<button class="ctl" data-c="back" aria-label="Delete">⌫</button><button class="ctl" data-c="clear">Clear</button>';
+  $('#cTols').innerHTML = [0, 1, 2, 5, 10].map(t => `<button data-t="${t}">${t ? `<i style="background:${TOL[t]}"></i>±${t}%` : 'None'}</button>`).join('');
+  checkerPaint();
+  rushShow('Check');
+}
+$('#cPad').onclick = e => {
+  const k = e.target.closest('[data-c]')?.dataset.c;
+  if (k === undefined) return;
+  if (k === 'back') CK.bands.pop();
+  else if (k === 'clear') CK.bands = [];
+  else if (CK.bands.length < 3) {
+    const c = k === 'g' ? GOLD : k === 's' ? SILVER : BAND[+k];
+    if ((c === GOLD || c === SILVER) && CK.bands.length < 2) return toast('Gold and silver are only multipliers');
+    CK.bands.push(c);
+  }
+  checkerPaint();
+};
+$('#cTols').onclick = e => { const b = e.target.closest('[data-t]'); if (b) { CK.tol = +b.dataset.t; checkerPaint(); } };
+for (const el of ['#ckmC', '#ckmV', '#cIn', '#cUnit', '#cTol']) $(el).addEventListener('input', checkerPaint);
+$('#rushCheckBtn').onclick = showChecker;
 $('#rushStart').onclick = $('#rushAgain').onclick = () => rushStart(false);
 $('#rushPractice').onclick = () => rushStart(true);
 $('#cheatRows').innerHTML = COLOR_NAMES.map((n, d) => [n, BAND[d], d, ['×1', '×10', '×100', '×1k', '×10k', '×100k', '×1M'][d] || '', { 1: '±1%', 2: '±2%' }[d] || ''])
