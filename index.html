@@ -62,7 +62,7 @@ button:disabled { cursor: default; opacity: .4; }
 .rushBtn .lead { stroke: currentColor; }
 .rushBtn:active { background: #A8350F; }
 .rushBtn:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 3px; }
-#rush .bar { position: relative; background: var(--rush); color: var(--rush-ink); border-bottom: 0; }
+#rush .bar { position: relative; background: var(--rush); color: var(--rush-ink); border-bottom: 0; box-shadow: 0 0 0 100vmax var(--rush); clip-path: inset(-300px -100vmax 0); }
 #rush .bar::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 300px; background: var(--rush); }
 #rush .bar b { font-style: italic; letter-spacing: .02em; }
 #rush .bar small { color: inherit; opacity: .85; }
@@ -271,6 +271,23 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
   .live .cardbg { animation: none; fill: color-mix(in srgb, var(--live) 16%, var(--card)); }
 }
 
+/* Desktop: the circuit fills the left, the keypad and calculator sit in a panel on the right. */
+@media (min-width: 900px) {
+  #game { max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); }
+  #game .bar { grid-column: 1 / -1; padding: 10px 16px; }
+  #board { padding: 24px 32px; align-items: center; }
+  #svg { height: 100%; }
+  #panel { border-top: 0; border-left: 1px solid var(--edge); align-content: center; padding: 24px; overflow-y: auto; }
+  .pad button { height: 58px; }
+  #panel.calcing .pad button { height: 50px; }
+  #home { max-width: 520px; padding-top: 56px; }
+  #rush { max-width: 620px; }
+  #rush .rsvg { max-width: 540px; }
+  #rushPlay { grid-template-rows: none; align-content: center; }
+  .rcard { padding: 28px; }
+  .rq { font-size: 26px; }
+}
+
 /* Toast and dialogs */
 #toast {
   position: fixed; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -8px);
@@ -391,6 +408,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <p>Read or build as many resistors as you can in 60 seconds.</p>
     <p>Some show you the color bands: type the value and press Enter. Others give you the value: tap the colors, then press Enter. When there's a tolerance, pick it too.</p>
     <p>The color chart is always there, but a resistor you peek at doesn't score.</p>
+    <p class="note">On a keyboard: type values with k and M, press 0 to 9 for a color, G for gold, S for silver, and Enter to answer.</p>
     <button class="primary" id="rushStart">Start the 60-second rush</button>
     <button class="ghost" id="rushPractice">Practice, no timer</button>
     <button class="ghost" id="rushCheckBtn">Resistor checker</button>
@@ -798,7 +816,6 @@ let base; // the drawn circuit: size, card rectangles, card centers
 function drawCircuit() {
   base = circuitSvg(P.tree);
   const svg = $('#svg');
-  svg.style.maxWidth = base.vw * 1.3 + 'px';
   svg.innerHTML = base.html + '<g id="notes"></g>';
 }
 
@@ -868,11 +885,16 @@ $('#status').onclick = e => {
 };
 
 /* ---------- Painting ---------- */
+const wide = () => matchMedia('(min-width: 900px)').matches;
+addEventListener('resize', () => { if (P && !$('#game').hidden) paint(); });
 function paint() {
   const svg = $('#svg');
   // An empty note disappears once it's no longer selected or targeted.
   S.notes = S.notes.filter(n => n.t || n.id === sel || (C && C.target === n.id));
-  svg.setAttribute('viewBox', `0 0 ${base.vw} ${Math.max(base.vh, ...S.notes.map(n => n.y + NH + M))}`);
+  const vh = Math.max(base.vh, ...S.notes.map(n => n.y + NH + M)), zoom = wide() ? 2.2 : 1.3; // cap how big small circuits get
+  svg.setAttribute('viewBox', `0 0 ${base.vw} ${vh}`);
+  svg.style.maxWidth = base.vw * zoom + 'px';
+  svg.style.maxHeight = vh * zoom + 'px';
   $('#notes').innerHTML = S.notes.map(noteSvg).join('');
   svg.classList.toggle('metering', mode === 'meter');
   for (const g of svg.querySelectorAll('.cell')) {
@@ -881,8 +903,9 @@ function paint() {
     t.classList.toggle('long', v.length === 5);
     t.classList.toggle('xlong', v.length > 5);
     // Squeeze long values to fit the box, whatever font loaded.
-    if (v.length >= 5) t.setAttribute('textLength', g.querySelector('rect').getAttribute('width') - 6);
-    else t.removeAttribute('textLength');
+    t.removeAttribute('textLength');
+    const room = g.querySelector('rect').getAttribute('width') - 6;
+    if (v && t.getComputedTextLength() > room) t.setAttribute('textLength', room);
     g.classList.toggle('given', given(id));
     g.classList.toggle('has', !!v);
     g.classList.toggle('meas', !!S.meas[id]);
@@ -1581,8 +1604,11 @@ $('#cheatBtn').onclick = () => {
 };
 addEventListener('keydown', e => {
   if ($('#rush').hidden || !R || document.querySelector('dialog[open]') || e.metaKey || e.ctrlKey) return;
-  const k = e.key === 'Enter' ? 'enter' : e.key === 'Backspace' ? 'back' : R.q && R.q.mode === 'read' && /^[0-9.]$/.test(e.key) ? e.key
-    : R.q && R.q.mode === 'read' && /^[kK]$/.test(e.key) ? 'k' : R.q && R.q.mode === 'read' && /^[mM]$/.test(e.key) ? 'M' : null;
+  const read = R.q && R.q.mode === 'read', key = e.key;
+  // Building: digit keys pick that color, g and s pick gold and silver.
+  const k = key === 'Enter' ? 'enter' : key === 'Backspace' ? 'back'
+    : read ? (/^[0-9.]$/.test(key) ? key : /^[kK]$/.test(key) ? 'k' : /^[mM]$/.test(key) ? 'M' : null)
+    : /^[0-9]$/.test(key) ? 'c' + key : /^[gG]$/.test(key) ? 'cg' : /^[sS]$/.test(key) ? 'cs' : null;
   if (k) { e.preventDefault(); rushKey(k); }
 });
 
