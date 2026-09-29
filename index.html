@@ -591,7 +591,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <h4>Tools</h4>
       <dl class="tools">
         <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
-        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or ∥ above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Tap an empty box first to send it there. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
+        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or ∥ above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
@@ -929,7 +929,7 @@ function tapNote(id) {
   if (S.solved) return;
   if (mode === 'meter') return toast("Notes can't be measured");
   if (mode === 'calc') {
-    if (note(id).t) fillSlot(id); else C.target = C.target === id ? null : id;
+    if (note(id).t) fillSlot(id); else if (!dropAnswer(id)) C.target = C.target === id ? null : id;
     return paint();
   }
   setSel(id); paint();
@@ -1042,7 +1042,7 @@ function tapCell(id) {
   }
   if (mode === 'calc') {
     if (valOf(id) !== '') fillSlot(id);
-    else if (!locked(id)) C.target = id;
+    else if (!locked(id) && !dropAnswer(id)) C.target = id;
     return paint();
   }
   if (locked(id)) return;
@@ -1205,6 +1205,18 @@ function place() {
   C.ans = r.shown; C.ansU = r.unit; C.target = null;
   buzz(8);
   after();
+  return true;
+}
+// In calc mode, tapping an empty box or note with a finished calculation drops
+// the answer there and goes back to typing in boxes, ready for the next one.
+function dropAnswer(id) {
+  if (!calcResult()) return false;
+  C.target = id;
+  if (!place()) { C.target = null; return true; }
+  C.slots = [slot(), slot()]; C.at = 0;
+  if (!S.solved) { mode = 'input'; if (!isNote(id)) setSel(id); }
+  paint();
+  return true;
 }
 function paintCalc() {
   const chip = (s, i) => `<button class="slot${i === C.at ? ' at' : ''}${s.t ? '' : ' empty'}" data-slot="${i}" aria-label="Value ${i + 1}">` +
