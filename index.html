@@ -50,28 +50,29 @@ button:disabled { cursor: default; opacity: .4; }
 #home { max-width: 460px; margin: 0 auto; padding: 28px 16px 40px; display: grid; gap: 28px; }
 .brand { display: grid; gap: 6px; position: relative; }
 :root { --rush: #C8441B; --rush-ink: #FFF6EE; }
-/* Folder tabs that hang from the top edge of the screen. Each one morphs
-   into the other screen's header or title (see the view transition below). */
+/* Folder tabs that hang from the top edge of the screen. */
 .rushBtn, .ohmyTab { border: 0; border-radius: 0 0 14px 14px; position: relative; }
 .rushBtn::before, .ohmyTab::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 300px; background: inherit; }
 .rushBtn {
   position: absolute; top: -28px; right: 0; background: var(--rush); color: var(--rush-ink);
   padding: 18px 16px 14px; display: grid; justify-items: center; gap: 6px;
   font: 700 14px/1.05 var(--display); letter-spacing: .1em; text-transform: uppercase; text-align: center;
-  box-shadow: 0 4px 12px rgb(0 0 0 / .18); view-transition-name: rushtab; z-index: 2;
+  box-shadow: 0 4px 12px rgb(0 0 0 / .18); z-index: 2;
 }
 .ohmyTab {
   align-self: stretch; margin: -6px 4px -12px 0; padding: 0 14px; background: #13201A; color: #EEF1EC;
-  font: 700 22px/1 var(--display); letter-spacing: -.01em; box-shadow: 0 4px 12px rgb(0 0 0 / .25); view-transition-name: ohmytab;
+  font: 700 22px/1 var(--display); letter-spacing: -.01em; box-shadow: 0 4px 12px rgb(0 0 0 / .25);
 }
 .ohmyTab span { color: #F2A900; }
-.brand h1 { view-transition-name: ohmytab; }
-#rush:not([hidden]) .bar { view-transition-name: rushtab; }
-::view-transition-group(*) { animation-duration: .45s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+/* Screen changes: the new screen grows as a circle out of the spot you
+   tapped (--tx, --ty), over the old one, which holds still. */
+::view-transition-old(root) { animation: none; }
+::view-transition-new(root) { animation: reveal .5s cubic-bezier(.4, 0, .2, 1); }
+@keyframes reveal {
+  from { clip-path: circle(0 at var(--tx, 50%) var(--ty, 0)); }
+  to { clip-path: circle(150vmax at var(--tx, 50%) var(--ty, 0)); }
 }
+@media (prefers-reduced-motion: reduce) { ::view-transition-new(root) { animation: none; } }
 .rushBtn svg { width: 56px; height: 24px; }
 .rushBtn .lead { stroke: currentColor; }
 .rushBtn:active { background: #A8350F; }
@@ -1698,7 +1699,12 @@ function route() {
   const code = O.parseCode(location.hash.slice(1));
   code ? openGame(code) : showHome();
 }
-// Animate between screens where the browser supports it; the tabs morph into each other.
+// Animate between screens where the browser supports it: remember where the
+// last tap landed so the new screen can grow out of that spot.
+addEventListener('pointerdown', e => {
+  document.documentElement.style.setProperty('--tx', e.clientX + 'px');
+  document.documentElement.style.setProperty('--ty', e.clientY + 'px');
+}, true);
 addEventListener('hashchange', () => document.startViewTransition ? document.startViewTransition(route) : route());
 route();
 </script>
