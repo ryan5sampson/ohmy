@@ -138,8 +138,7 @@ button:disabled { cursor: default; opacity: .4; }
   border: 2px solid var(--ink); border-radius: 22px; background: var(--card); font: 600 15px var(--display);
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
-.peek svg { width: 30px; height: 20px; }
-.peek text { font: 700 15px var(--num); fill: currentColor; }
+.peek svg { width: 24px; height: 24px; }
 .peek[aria-pressed="true"] { background: var(--sel); color: #13201A; }
 #rPad .sw { font: 700 17px var(--num); }
 #rPad .dot { display: inline-block; width: 16px; height: 22px; border-radius: 4px; margin-right: 8px; vertical-align: -3px; border: 1px solid rgb(0 0 0 / .35); }
@@ -475,7 +474,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     </div>
   </section>
   <section id="rushPlay" class="rpane" hidden>
-    <div class="rstat"><span id="rTime">60</span><button class="peek" id="rPeek" aria-pressed="false" aria-label="Peek: hold to see the numbers for each color"><svg viewBox="0 0 30 20" aria-hidden="true"><rect x="1" y="2" width="11" height="16" rx="3" fill="#FFE600" stroke="#000" stroke-opacity=".3"/><text x="21" y="15.5" text-anchor="middle">4</text></svg>Peek</button><span id="rScore">0</span></div>
+    <div class="rstat"><span id="rTime">60</span><button class="peek" id="rPeek" aria-pressed="false" aria-label="Peek: hold to see the numbers for each color"><svg viewBox="0 0 24 24" aria-hidden="true"><clipPath id="pkBox"><rect x="1" y="1" width="22" height="22" rx="5"/></clipPath><g clip-path="url(#pkBox)"><rect width="8" height="24" fill="#D7261E"/><rect x="8" width="8" height="24" fill="#2E9E44"/><rect x="16" width="8" height="24" fill="#2F5FD0"/></g><path d="M10 5L8 19M16 5l-2 14M5 9.5h14M4.5 14.5h14" fill="none" stroke="#13201A" stroke-width="4.4" stroke-linecap="round"/><path d="M10 5L8 19M16 5l-2 14M5 9.5h14M4.5 14.5h14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>Peek</button><span id="rScore">0</span></div>
     <div class="rcard" id="rCard">
       <p class="rq" id="rQ"></p>
       <svg class="rsvg" id="rSvg" viewBox="0 0 300 80" role="img"></svg>
