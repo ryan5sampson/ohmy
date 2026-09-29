@@ -133,9 +133,14 @@ button:disabled { cursor: default; opacity: .4; }
 .call .cn { font: 500 11px var(--text); fill: var(--muted); }
 .prac #rTime { font: 600 20px var(--display); align-self: center; color: var(--muted); }
 .prac #rScore::after { content: ' right'; }
-.rhint { display: none; align-items: center; gap: 6px; font: 500 14px var(--text); color: var(--muted); }
-.rhint input { width: 20px; height: 20px; accent-color: var(--mine); }
-.prac .rhint { display: flex; }
+.peek {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; align-self: center;
+  border: 2px solid var(--ink); border-radius: 22px; background: var(--card); font: 600 15px var(--display);
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.peek svg { width: 30px; height: 20px; }
+.peek text { font: 700 15px var(--num); fill: currentColor; }
+.peek[aria-pressed="true"] { background: var(--sel); color: #13201A; }
 #rPad .sw { font: 700 17px var(--num); }
 #rushLearn { align-content: start; }
 #rushLearn .rq { margin: 0; }
@@ -193,7 +198,7 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .bar { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--edge); }
 .bar .title { flex: 1; min-width: 0; display: grid; line-height: 1.15; }
 .bar b { font: 700 18px var(--display); }
-.bar small { color: var(--muted); font: 600 13px var(--num); letter-spacing: .06em; }
+.bar small { color: var(--muted); font: 600 13px var(--num); letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon { width: 44px; height: 44px; border: 0; background: none; border-radius: 10px; font-size: 22px; display: grid; place-items: center; }
 .icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #board { flex: 1; min-height: 0; overflow: auto; padding: 10px 16px; display: flex; justify-content: center; align-items: flex-start; }
@@ -437,7 +442,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <svg class="rsvg" viewBox="0 0 300 80" aria-hidden="true" id="rIntroSvg"></svg>
     <p>Read or build as many resistors as you can in 60 seconds.</p>
     <p>Some show you the color bands: type the value and press Enter. Others give you the value: tap the colors, then press Enter. When there's a tolerance, pick it too.</p>
-    <p>The color chart is always there, but a resistor you peek at doesn't score.</p>
+    <p>Stuck? Hold <b>Peek</b> to see the numbers behind the colors, or open the chart. A resistor you peek at doesn't score, except in practice.</p>
     <p class="note">On a keyboard: type values with k and M, press 0 to 9 for a color, G for gold, S for silver, and Enter to answer.</p>
     <button class="primary" id="rushStart">Start the 60-second rush</button>
     <button class="ghost" id="rushPractice">Practice, no timer</button>
@@ -469,7 +474,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     </div>
   </section>
   <section id="rushPlay" class="rpane" hidden>
-    <div class="rstat"><span id="rTime">60</span><label class="rhint"><input type="checkbox" id="rHint"> Show numbers</label><span id="rScore">0</span></div>
+    <div class="rstat"><span id="rTime">60</span><button class="peek" id="rPeek" aria-pressed="false" aria-label="Peek: hold to see the numbers for each color"><svg viewBox="0 0 30 20" aria-hidden="true"><rect x="1" y="2" width="11" height="16" rx="3" fill="#FFE600" stroke="#000" stroke-opacity=".3"/><text x="21" y="15.5" text-anchor="middle">4</text></svg>Peek</button><span id="rScore">0</span></div>
     <div class="rcard" id="rCard">
       <p class="rq" id="rQ"></p>
       <svg class="rsvg" id="rSvg" viewBox="0 0 300 80" role="img"></svg>
@@ -1434,9 +1439,10 @@ function walkthrough(q) {
     ['Tolerance', q.tol ? `${colorName(TOL[q.tol])} → ±${q.tol}%` : 'no band → ±20%'],
   ]);
 }
-// Practice can label every button with its number; otherwise buttons show only
-// what you'd look up: colors when building, percentages when reading.
-const hints = () => R && R.practice && store.get('rushHints', false);
+// Buttons show only what you'd look up: colors when building, percentages when
+// reading. Holding Peek fills in the other half: numbers on the color buttons,
+// or labels under the bands you're reading.
+const hints = () => R && R.peekHold;
 const lightText = c => ['#1a1a1a', '#7a4a1e', '#d7261e', '#2f5fd0', '#8a3fc2', '#8c8c8c'].includes(c);
 function rushTols(mode) {
   const color = mode === 'build' || hints(), pct = mode === 'read' || hints();
@@ -1459,7 +1465,10 @@ function rushPaint() {
   const q = R.q;
   if (R.reveal) return;
   $('#rQ').innerHTML = (q.mode === 'read' ? "What's this resistor?" : `Build ${q.text}`) + (R.peek && !R.practice ? '<small>Peeked, so this one won\'t score</small>' : '');
-  $('#rSvg').innerHTML = q.mode === 'read' ? resistorSvg(q.bands, q.tol ? TOL[q.tol] : null)
+  const labeled = q.mode === 'read' && hints();
+  $('#rSvg').setAttribute('viewBox', labeled ? `0 0 320 ${DIAGRAM_H}` : '0 0 300 80');
+  $('#rSvg').innerHTML = labeled ? bandDiagram(q.bands, q.tol ? TOL[q.tol] : null, bandLabels(q))
+    : q.mode === 'read' ? resistorSvg(q.bands, q.tol ? TOL[q.tol] : null)
     : resistorSvg(R.bands, q.tol ? (R.tol ? TOL[R.tol] : '') : null);
   $('#rSvg').setAttribute('aria-label', q.mode === 'read' ? 'Resistor bands: ' + q.bands.map(c => c === GOLD ? 'gold' : c === SILVER ? 'silver' : COLOR_NAMES[BAND.indexOf(c)]).join(', ') + (q.tol ? ', tolerance band' : '') : 'Resistor to color in');
   $('#rAns').textContent = q.mode === 'read' ? `${R.input || '?'} Ω` + (q.tol ? ` ±${R.tol || '?'}%` : '') : '';
@@ -1470,6 +1479,7 @@ function rushPaint() {
 }
 function rushNext() {
   R.q = rushQuestion(); R.input = ''; R.bands = []; R.tol = null; R.peek = false; R.lock = false; R.reveal = false; R.shown = false;
+  R.peekHold = false; $('#rPeek').setAttribute('aria-pressed', false); // a new resistor needs a fresh press to peek
   $('#rCard').className = 'rcard';
   $('#rushPlay').classList.remove('revealing');
   $('#rSvg').setAttribute('viewBox', '0 0 300 80');
@@ -1563,7 +1573,6 @@ function rushStart(practice) {
   stopRush();
   R = { q: null, score: 0, tries: 0, peeks: 0, t0: Date.now(), done: false, practice };
   $('#rushPlay').classList.toggle('prac', practice);
-  $('#rHint').checked = store.get('rushHints', false);
   rushShow('Play'); rushNext();
   if (practice) $('#rTime').textContent = 'Practice';
   else { R.timer = setInterval(rushTick, 200); rushTick(); }
@@ -1605,10 +1614,21 @@ function showRush() {
   rushShow('Intro');
 }
 $('#rTols').onclick = e => { const b = e.target.closest('[data-tol]'); if (b && R && !R.lock) { R.tol = +b.dataset.tol; rushPaint(); } };
-$('#rHint').onchange = () => {
-  store.set('rushHints', $('#rHint').checked);
-  if (R && !R.reveal) { rushPad(R.q.mode); rushPaint(); }
-};
+// Peek shows while held (pointer, or Space/Enter on the button) and hides on release.
+// In the timed rush, peeking means that resistor won't score, like the chart.
+function peek(on) {
+  if (!R || R.reveal || R.done || !!R.peekHold === on) return;
+  R.peekHold = on;
+  if (on && !R.practice && !R.peek) { R.peek = true; R.peeks++; }
+  $('#rPeek').setAttribute('aria-pressed', on);
+  rushPad(R.q.mode); rushPaint();
+}
+const peekBtn = $('#rPeek');
+peekBtn.addEventListener('pointerdown', e => { peekBtn.setPointerCapture(e.pointerId); peek(true); });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) peekBtn.addEventListener(ev, () => peek(false));
+peekBtn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); peek(true); } });
+peekBtn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') peek(false); });
+peekBtn.addEventListener('contextmenu', e => e.preventDefault());
 $('#rPad').onclick = e => { const b = e.target.closest('[data-r]'); if (b) rushKey(b.dataset.r); };
 $('#rushBtn').onclick = () => { location.hash = 'rush'; };
 $('#rushHome').onclick = () => { location.hash = ''; };
