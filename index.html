@@ -898,12 +898,14 @@ function noteSvg(n) {
 }
 // Closest spot to (ax, ay) that doesn't cover a card or another note.
 // ponytail: grid scan of the whole drawing, fine at this size.
+let view = { x: 0, y: 0, w: 0, h: 0 }; // the visible drawing area, set by paint()
 function freeSpot(ax, ay) {
   const busy = base.rects.concat(S.notes.map(n => ({ x: n.x, y: n.y, w: NW, h: NH })));
   const clear = (x, y) => busy.every(r => x >= r.x + r.w + 4 || x + NW + 4 <= r.x || y >= r.y + r.h + 4 || y + NH + 4 <= r.y);
-  const maxY = Math.max(base.vh, ...S.notes.map(n => n.y + NH)) + NH;
+  const maxY = Math.max(base.vh, view.y + view.h - NH - 4, ...S.notes.map(n => n.y + NH)) + NH;
+  const x0 = Math.min(M, view.x + 4), x1 = Math.max(base.vw - NW - M, view.x + view.w - NW - 4);
   let best = { x: M, y: maxY }, bd = Infinity;
-  for (let y = M; y <= maxY; y += 6) for (let x = M; x <= base.vw - NW - M; x += 6) {
+  for (let y = Math.min(M, view.y + 4); y <= maxY; y += 6) for (let x = x0; x <= x1; x += 6) {
     const d = (x + NW / 2 - ax) ** 2 + (y + NH / 2 - ay) ** 2;
     if (d < bd && clear(x, y)) { bd = d; best = { x, y }; }
   }
@@ -956,10 +958,20 @@ function paint() {
   const svg = $('#svg');
   // An empty note disappears once it's no longer selected or targeted.
   S.notes = S.notes.filter(n => n.t || n.id === sel || (C && C.target === n.id));
-  const vh = Math.max(base.vh, ...S.notes.map(n => n.y + NH + M)), zoom = wide() ? 2.2 : 1.3; // cap how big small circuits get
-  svg.setAttribute('viewBox', `0 0 ${base.vw} ${vh}`);
-  svg.style.maxWidth = base.vw * zoom + 'px';
-  svg.style.maxHeight = vh * zoom + 'px';
+  // The drawing fills the whole board, with the circuit centered in it, so notes
+  // can go anywhere you can see. Scale is capped so small circuits don't balloon.
+  const bd = $('#board'), cs = getComputedStyle(bd);
+  const bw = bd.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const bh = bd.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const vh = Math.max(base.vh, ...S.notes.map(n => n.y + NH + M));
+  if (bw > 0) {
+    const s = Math.min(bw / base.vw, wide() ? 2.2 : 1.3, wide() ? bh / vh : Infinity);
+    const W = bw / s, H = Math.max(vh, bh / s);
+    view = { x: (base.vw - W) / 2, y: wide() ? (vh - H) / 2 : 0, w: W, h: H };
+    svg.setAttribute('viewBox', `${view.x} ${view.y} ${W} ${H}`);
+    svg.style.width = bw + 'px';
+    svg.style.height = H * s + 'px';
+  }
   $('#notes').innerHTML = S.notes.map(noteSvg).join('');
   svg.classList.toggle('metering', mode === 'meter');
   for (const g of svg.querySelectorAll('.cell')) {
@@ -1284,8 +1296,8 @@ addEventListener('pointermove', e => {
     if (!drag.on && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
     drag.on = true;
     const n = drag.move, p = svgPoint(e);
-    n.x = Math.min(Math.max(0, p.x - drag.dx), base.vw - NW);
-    n.y = Math.max(0, p.y - drag.dy);
+    n.x = Math.min(Math.max(view.x, p.x - drag.dx), view.x + view.w - NW);
+    n.y = Math.max(view.y, p.y - drag.dy);
     const g = $(`[data-note="${n.id}"]`);
     if (g) g.setAttribute('transform', `translate(${n.x} ${n.y})`);
     return;
