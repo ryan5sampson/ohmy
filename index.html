@@ -278,8 +278,10 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
   #board { padding: 24px 32px; align-items: center; }
   #svg { height: 100%; }
   #panel { border-top: 0; border-left: 1px solid var(--edge); align-content: center; padding: 24px; overflow-y: auto; }
-  .pad button { height: 58px; }
-  #panel.calcing .pad button { height: 50px; }
+  .pad button { height: 52px; }
+  #panel.calcing .pad button { height: 52px; }
+  #panel:not(.calcing) #calc { opacity: .65; transition: opacity .15s; }
+  #panel:not(.calcing) #calc:hover { opacity: 1; }
   #home { max-width: 520px; padding-top: 56px; }
   #rush { max-width: 620px; }
   #rush .rsvg { max-width: 540px; }
@@ -733,7 +735,7 @@ function openGame(code) {
   S = Object.assign({ vals: {}, meas: {}, wrong: {}, used: 0, solved: false, notes: [], nn: 0 }, store.get(P.code, {}));
   sel = (openCells().find(c => !S.vals[c.id] && !S.meas[c.id]) || {}).id || null;
   if (S.solved) sel = null;
-  mode = 'input'; C = null;
+  mode = 'input'; C = { op: 'div', slots: [slot(), slot()], at: 0, target: null, ans: null };
   const daily = P.code === O.dailyCode(today(), P.diff);
   $('#gTitle').textContent = daily ? `Daily ${DIFF[P.diff]}` : `${DIFF[P.diff]} · ${STYLE[P.style]}`;
   $('#gSub').textContent = daily ? `${STYLE[P.style]} · ${P.code}` : P.code;
@@ -947,8 +949,9 @@ function paint() {
   $('#panel').classList.toggle('calcing', mode === 'calc');
   pk('clear').disabled = S.solved;
   pk('calc').disabled = S.solved;
-  $('#calc').hidden = mode !== 'calc';
-  if (mode === 'calc') paintCalc();
+  // On desktop the calculator stays on screen; using it switches to calc mode.
+  $('#calc').hidden = mode !== 'calc' && !wide();
+  if (!$('#calc').hidden) paintCalc();
 }
 
 /* ---------- Input ---------- */
@@ -1046,7 +1049,6 @@ const slot = () => ({ t: '', u: '', src: '', from: '' });
 function toggleCalc() {
   if (mode === 'calc') { mode = 'input'; return paint(); }
   mode = 'calc';
-  if (!C) C = { op: 'div', slots: [slot(), slot()], at: 0, target: null, ans: null };
   paint();
 }
 // Tapping an operation, even the current one, starts a fresh calculation.
@@ -1131,6 +1133,9 @@ function paintCalc() {
   ans.hidden = C.ans == null;
   ans.textContent = `Ans ${C.ans}`;
 }
+// Switch modes on press, but repaint after the click so the slot you pressed still gets it.
+$('#calc').addEventListener('pointerdown', () => { if (!S.solved) mode = 'calc'; });
+$('#calc').addEventListener('click', () => paint());
 $('#ops').onclick = e => { const b = e.target.closest('[data-op]'); if (b) setOp(b.dataset.op); };
 $('#expr').onclick = e => {
   if (e.target.closest('.eq')) return place();
@@ -1164,7 +1169,7 @@ function dropTarget(x, y) {
   if (g && !locked(g.dataset.id) && g.dataset.id !== drag.v.from) return g;
   const nt = el && el.closest('.note');
   if (nt && nt.dataset.note !== drag.v.from) return nt;
-  return s && mode === 'calc' ? s : null;
+  return s && !$('#calc').hidden ? s : null;
 }
 function endDrag(drop) {
   if (!drag) return;
@@ -1179,6 +1184,7 @@ function endDrag(drop) {
   if (over.dataset.slot) {
     Object.assign(C.slots[+over.dataset.slot], { t: v.t, u: v.u, src: v.src, from: v.from || '' });
     C.at = +over.dataset.slot;
+    mode = 'calc';
     nextEmpty();
     return paint();
   }
