@@ -221,6 +221,13 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .ops [aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
 .ops .ans { flex: 0 0 auto; padding: 0 8px; font: 600 14px var(--display); }
 #panel.calcing .pad button { height: 42px; }
+/* Make it obvious where typing goes: in calc mode the calculator gets a blue
+   frame and the number keys turn blue; otherwise the selected box is yellow. */
+#calc { border: 2px solid transparent; border-radius: 12px; padding: 6px; margin: -8px; }
+#panel.calcing #calc { border-color: var(--mine); background: color-mix(in srgb, var(--mine) 7%, var(--bg)); }
+#panel.calcing .pad button:not(.tool) { background: color-mix(in srgb, var(--mine) 18%, var(--key)); }
+.where { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 10px; font: 600 12px var(--display); letter-spacing: .04em; text-transform: uppercase; background: var(--sel); color: #13201A; }
+.where.calc { background: var(--mine); color: var(--bg); }
 #expr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font: 600 20px var(--num); }
 .slot { min-width: 48px; height: 40px; padding: 0 8px; border: 2px solid var(--edge); background: var(--cell); border-radius: 8px; font: 600 19px var(--num); display: inline-flex; align-items: center; gap: 3px; }
 .slot.empty { color: var(--muted); border-style: dashed; }
@@ -969,13 +976,13 @@ function paint() {
   else if (mode === 'meter') st.innerHTML = '<b>Meter:</b> tap a box to measure it';
   else if (mode === 'calc') {
     const d = dest(calcResult());
-    st.innerHTML = !C.slots.some(s => s.t) ? OPS[C.op].hint
-      : d ? `Answer goes to <b>${isNote(d) ? 'your note' : label(cells[d])}</b>` : 'Answer becomes a <b>new note</b>';
+    st.innerHTML = '<span class="where calc">Calc</span>' + (!C.slots.some(s => s.t) ? OPS[C.op].hint
+      : d ? `Answer goes to <b>${isNote(d) ? 'your note' : label(cells[d])}</b>` : 'Answer becomes a <b>new note</b>');
   } else if (isNote(sel)) {
     const n = note(sel);
     st.innerHTML = '<span class="nbar"><b>Note</b>' + ['V', 'A', 'Ω'].map(u => `<button data-nu="${u}" aria-pressed="${n.u === u}">${u}</button>`).join('') +
       '<button class="del" data-ndel>Delete</button></span>';
-  } else st.innerHTML = sel ? `<b>${label(cells[sel])}</b> (${O.UNIT[cells[sel].q]})` : 'Tap an empty box to fill it in';
+  } else st.innerHTML = sel ? `<span class="where">Box</span><b>${label(cells[sel])}</b> (${O.UNIT[cells[sel].q]})` : 'Tap an empty box to fill it in';
   $('#stMeter').textContent = P.style === 'P' ? `Measured ${S.used} · par ${P.par}` : '';
   $('#mLeft').textContent = meterLeft();
   const pk = k => $(`[data-k="${k}"]`);
@@ -1098,8 +1105,15 @@ function toggleCalc() {
 function setOp(op) { C.op = op; C.slots = [slot(), slot()]; C.at = 0; C.target = null; paint(); }
 // Every operation takes two values; the + after the last one adds another.
 function nextEmpty() { const i = C.slots.findIndex(s => !s.t); if (i >= 0) C.at = i; }
+// A tapped value fills the active slot if it's empty, or the slot you just
+// tapped to replace. Otherwise it goes in the next empty slot, or a new one.
 function fillSlot(id) {
   const n = isNote(id) && note(id), c = cells[id];
+  if (C.slots[C.at].t && !C.pick) {
+    const i = C.slots.findIndex(s => !s.t);
+    C.at = i >= 0 ? i : C.slots.push(slot()) - 1;
+  }
+  C.pick = false;
   Object.assign(C.slots[C.at], n ? { t: n.t, u: n.u, src: n.label || 'Note', from: id } : { t: valOf(id), u: O.UNIT[c.q], src: short(c), from: id });
   nextEmpty();
 }
@@ -1185,7 +1199,7 @@ $('#expr').onclick = e => {
   if (e.target.closest('.eq')) return place();
   if (e.target.closest('[data-more]')) { C.slots.push(slot()); C.at = C.slots.length - 1; return paint(); }
   const b = e.target.closest('[data-slot]');
-  if (b) { C.at = +b.dataset.slot; paint(); }
+  if (b) { C.at = +b.dataset.slot; C.pick = true; paint(); }
 };
 $('#ansBtn').onclick = () => { Object.assign(C.slots[C.at], { t: String(C.ans), u: C.ansU || '', src: 'Ans', from: '' }); nextEmpty(); paint(); };
 
