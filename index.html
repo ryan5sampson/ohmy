@@ -349,6 +349,8 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 .ccode span { display: grid; gap: 2px; justify-items: center; font: 600 13px var(--num); }
 .ccode small { font: 500 11px var(--text); color: var(--muted); }
 .ccode i { width: 100%; height: 16px; border-radius: 4px; border: 1px solid var(--edge); }
+.invite { margin: 12px 0 0; color: var(--muted); }
+#winGo.rush { background: var(--rush); color: var(--rush-ink); }
 #winStat { font: 700 32px/1.1 var(--num); margin: 4px 0; }
 </style>
 </head>
@@ -650,8 +652,10 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
   <h3>Circuit complete</h3>
   <p id="winStat"></p>
   <p id="winText"></p>
+  <p class="invite">Think a friend can solve it? Send them this exact circuit.</p>
   <div class="dact">
-    <button class="primary" id="winShare">Share</button>
+    <button class="primary" id="winShare">Share this puzzle</button>
+    <button class="primary" id="winGo"></button>
     <button class="ghost" id="winNext">New puzzle</button>
     <button class="ghost" id="winHome">Home</button>
   </div>
@@ -1032,7 +1036,13 @@ function win() {
     $('#winStat').textContent = n ? `${n} meter check${s}` : 'No meter checks';
     $('#winText').textContent = n ? 'Solved. Try the next one without the meter.' : 'Solved by logic alone.';
   }
+  // Point to the next harder daily you haven't solved; after Hard, Resistor Rush.
+  const next = [...'EMH'.slice('EMH'.indexOf(P.diff) + 1)].find(d => !store.get(O.dailyCode(today(), d), {}).solved);
+  winGo = next ? O.dailyCode(today(), next) : 'rush';
+  $('#winGo').textContent = next ? `Play today's ${DIFF[next]}` : 'Try Resistor Rush';
+  $('#winGo').classList.toggle('rush', !next);
   $('#winNext').textContent = `New ${DIFF[P.diff]} ${STYLE[P.style]} puzzle`;
+  $('#winNext').hidden = P.code === O.dailyCode(today(), P.diff);
   setTimeout(() => $('#win').showModal(), 1500);
 }
 
@@ -1309,6 +1319,8 @@ async function share() {
 $('#shareBtn').onclick = share;
 $('#winShare').onclick = share;
 $('#winHome').onclick = () => { $('#win').close(); location.hash = ''; };
+let winGo = '';
+$('#winGo').onclick = () => { $('#win').close(); location.hash = winGo; };
 $('#winNext').onclick = () => { $('#win').close(); go(O.randomCode(P.diff, P.style)); };
 
 /* ---------- Resistor Rush ---------- */
