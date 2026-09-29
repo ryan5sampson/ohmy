@@ -973,6 +973,10 @@ function paint() {
     svg.style.height = H * s + 'px';
   }
   $('#notes').innerHTML = S.notes.map(noteSvg).join('');
+  // Squeeze a long label like "Ω R1+R2+R3" to fit left of the grip dots.
+  for (const t of document.querySelectorAll('#notes .nl')) {
+    if (t.getComputedTextLength() > NW - 28) { t.setAttribute('textLength', NW - 28); t.setAttribute('lengthAdjust', 'spacingAndGlyphs'); }
+  }
   svg.classList.toggle('metering', mode === 'meter');
   for (const g of svg.querySelectorAll('.cell')) {
     const id = g.dataset.id, c = cells[id], v = valOf(id), t = g.querySelector('.val');
