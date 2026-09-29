@@ -205,26 +205,38 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 #svg { width: 100%; height: auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 #panel { padding: 8px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--edge); display: grid; gap: 8px; }
 #board, #panel { user-select: none; -webkit-user-select: none; }
-#status { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; color: var(--muted); min-height: 22px; }
+#status { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; color: var(--muted); height: 32px; }
+/* One line, always the same height, so the keys below never shift. */
+#stText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#stMeter { flex-shrink: 0; }
 #status b { color: var(--ink); font-weight: 600; }
 .pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .pad button { height: 50px; border: 0; border-radius: 9px; background: var(--key); font: 600 24px var(--num); touch-action: manipulation; }
 .pad .tool { font: 600 15px var(--display); letter-spacing: .04em; }
-.pad .zero { grid-column: span 2; }
+.pad .zero { grid-column: span 3; }
 .pad [aria-pressed="true"] { background: var(--sel); color: var(--ink); }
 .pad .tool small { font: 700 13px var(--num); margin-left: 3px; }
 
 /* Calculator */
-#calc { display: grid; gap: 8px; }
+/* The operation buttons sit above the keypad and toggle calc mode. The
+   calculation itself lives in a tray that slides up out of the panel's top
+   edge (the wrapper clips it), so nothing below it moves. In calc mode the
+   pressed operation and the number keys turn blue. */
+#panel { position: relative; }
+.calcwrap { position: absolute; left: 0; right: 0; bottom: 100%; overflow: hidden; pointer-events: none; }
+#calc {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 16px;
+  background: color-mix(in srgb, var(--mine) 9%, var(--bg)); border-top: 2px solid var(--mine);
+  transform: translateY(101%); transition: transform .2s ease-out; pointer-events: auto;
+}
+#panel.calcing #calc { transform: none; }
+#game.calcing #board { padding-bottom: 130px; } /* room to scroll cards out from under the tray */
+#panel:not(.calcing) #calc { visibility: hidden; transition: transform .2s ease-out, visibility 0s .2s; }
+#expr { flex: 1; }
 .ops { display: flex; gap: 6px; }
-.ops button { flex: 1; height: 34px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 20px var(--num); }
-.ops [aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--bg); }
-.ops .ans { flex: 0 0 auto; padding: 0 8px; font: 600 14px var(--display); }
-#panel.calcing .pad button { height: 42px; }
-/* Make it obvious where typing goes: in calc mode the calculator gets a blue
-   frame and the number keys turn blue; otherwise the selected box is yellow. */
-#calc { border: 2px solid transparent; border-radius: 12px; padding: 6px; margin: -8px; }
-#panel.calcing #calc { border-color: var(--mine); background: color-mix(in srgb, var(--mine) 7%, var(--bg)); }
+.ops button { flex: 1; height: 40px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 22px var(--num); }
+.ops [aria-pressed="true"] { border-color: var(--mine); background: var(--mine); color: var(--bg); }
+#calc .ans { height: 36px; padding: 0 10px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 14px var(--display); }
 #panel.calcing .pad button:not(.tool) { background: color-mix(in srgb, var(--mine) 18%, var(--key)); }
 .where { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 10px; font: 600 12px var(--display); letter-spacing: .04em; text-transform: uppercase; background: var(--sel); color: #13201A; }
 .where.calc { background: var(--mine); color: var(--bg); }
@@ -311,13 +323,13 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 @media (min-width: 900px) {
   #game { max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); }
   #game .bar { grid-column: 1 / -1; padding: 10px 16px; }
-  #board { padding: 24px 32px; align-items: center; }
+  #board, #game.calcing #board { padding: 24px 32px; align-items: center; }
   #svg { height: 100%; }
   #panel { border-top: 0; border-left: 1px solid var(--edge); align-content: center; padding: 24px; overflow-y: auto; }
   .pad button { height: 52px; }
-  #panel.calcing .pad button { height: 52px; }
-  #panel:not(.calcing) #calc { opacity: .65; transition: opacity .15s; }
-  #panel:not(.calcing) #calc:hover { opacity: 1; }
+  /* Here the tray gets a reserved spot above the status line and slides up inside it. */
+  .calcwrap { position: static; height: 170px; display: flex; align-items: flex-end; border-radius: 12px; }
+  #calc { width: 100%; max-height: 100%; overflow-y: auto; border: 2px solid var(--mine); border-radius: 12px; }
   #home { max-width: 520px; padding-top: 56px; }
   #rush { --rw: 620px; }
   #rush .rsvg { max-width: 540px; }
@@ -510,17 +522,18 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
   </header>
   <div id="board"><svg id="svg" role="group" aria-label="Circuit"></svg></div>
   <div id="panel">
-    <div id="status"><span id="stText"></span><span id="stMeter"></span></div>
-    <div id="calc" hidden>
-      <div class="ops" id="ops">
-        <button data-op="mul" aria-label="Multiply">×</button>
-        <button data-op="div" aria-label="Divide">÷</button>
-        <button data-op="add" aria-label="Add">+</button>
-        <button data-op="sub" aria-label="Subtract">−</button>
-        <button data-op="par" aria-label="Parallel resistance">∥</button>
-        <button id="ansBtn" class="ans" hidden></button>
-      </div>
+    <!-- The calculation slides up from behind the panel, so the keys below never move. -->
+    <div class="calcwrap"><div id="calc">
       <div id="expr" aria-live="polite"></div>
+      <button id="ansBtn" class="ans" hidden></button>
+    </div></div>
+    <div id="status"><span id="stText"></span><span id="stMeter"></span></div>
+    <div class="ops" id="ops" aria-label="Calculator: tap an operation to start, tap it again to stop">
+      <button data-op="mul" aria-label="Multiply" aria-pressed="false">×</button>
+      <button data-op="div" aria-label="Divide" aria-pressed="false">÷</button>
+      <button data-op="add" aria-label="Add" aria-pressed="false">+</button>
+      <button data-op="sub" aria-label="Subtract" aria-pressed="false">−</button>
+      <button data-op="par" aria-label="Parallel resistance" aria-pressed="false">∥</button>
     </div>
     <div class="pad" id="pad">
       <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
@@ -528,9 +541,8 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
       <button data-k="clear" class="tool">Clear</button>
       <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
-      <button data-k="calc" class="tool" aria-pressed="false">Calc</button>
-      <button data-k=".">.</button><button data-k="0" class="zero">0</button>
       <button data-k="meter" class="tool" aria-pressed="false">Meter<small id="mLeft"></small></button>
+      <button data-k=".">.</button><button data-k="0" class="zero">0</button>
     </div>
   </div>
 </main>
@@ -579,7 +591,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <h4>Tools</h4>
       <dl class="tools">
         <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
-        <dt><span class="chip">Calc</span></dt><dd>Pick ×, ÷, +, −, or ∥, then tap values to drop them in. Tap + after the last value to add another. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Tap an empty box first to send it there. Tap an operation to start over.</dd>
+        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or ∥ above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Tap an empty box first to send it there. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
@@ -986,16 +998,17 @@ function paint() {
   $('#stMeter').textContent = P.style === 'P' ? `Measured ${S.used} · par ${P.par}` : '';
   $('#mLeft').textContent = meterLeft();
   const pk = k => $(`[data-k="${k}"]`);
-  pk('calc').setAttribute('aria-pressed', mode === 'calc');
   pk('meter').setAttribute('aria-pressed', mode === 'meter');
   pk('meter').disabled = S.solved || meterLeft() <= 0;
   pk('.').disabled = mode !== 'calc' && P.dp === 0 && !isNote(sel);
   $('#panel').classList.toggle('calcing', mode === 'calc');
+  $('#game').classList.toggle('calcing', mode === 'calc');
   pk('clear').disabled = S.solved;
-  pk('calc').disabled = S.solved;
-  // On desktop the calculator stays on screen; using it switches to calc mode.
-  $('#calc').hidden = mode !== 'calc' && !wide();
-  if (!$('#calc').hidden) paintCalc();
+  for (const b of document.querySelectorAll('[data-op]')) {
+    b.setAttribute('aria-pressed', mode === 'calc' && b.dataset.op === C.op);
+    b.disabled = S.solved;
+  }
+  paintCalc();
 }
 
 /* ---------- Input ---------- */
@@ -1027,7 +1040,6 @@ function after() {
 function key(k) {
   if (k === 'esc') { mode = 'input'; return paint(); }
   if (S.solved) return;
-  if (k === 'calc') return toggleCalc();
   if (k === 'meter') { mode = mode === 'meter' ? 'input' : 'meter'; return paint(); }
   if (k === 'clear') return clearKey();
   if (mode === 'calc') return calcKey(k);
@@ -1096,13 +1108,14 @@ const OPS = {
 };
 const SYM = { mul: '×', div: '÷', add: '+', sub: '−' };
 const slot = () => ({ t: '', u: '', src: '', from: '' });
-function toggleCalc() {
-  if (mode === 'calc') { mode = 'input'; return paint(); }
-  mode = 'calc';
+// Operation buttons are toggles: tap one to calculate with it (switching
+// operations keeps your values), tap the lit one again to go back to boxes.
+function setOp(op) {
+  if (S.solved) return;
+  if (mode === 'calc' && C.op === op) mode = 'input';
+  else { C.op = op; mode = 'calc'; }
   paint();
 }
-// Tapping an operation, even the current one, starts a fresh calculation.
-function setOp(op) { C.op = op; C.slots = [slot(), slot()]; C.at = 0; C.target = null; paint(); }
 // Every operation takes two values; the + after the last one adds another.
 function nextEmpty() { const i = C.slots.findIndex(s => !s.t); if (i >= 0) C.at = i; }
 // A tapped value fills the active slot if it's empty, or the slot you just
@@ -1178,7 +1191,6 @@ function place() {
   after();
 }
 function paintCalc() {
-  for (const b of document.querySelectorAll('[data-op]')) b.setAttribute('aria-pressed', b.dataset.op === C.op);
   const chip = (s, i) => `<button class="slot${i === C.at ? ' at' : ''}${s.t ? '' : ' empty'}" data-slot="${i}" aria-label="Value ${i + 1}">` +
     (s.src ? `<i>${s.src}</i>` : '') + (s.t || '?') + (s.u ? `<small>${s.u}</small>` : '') + '</button>';
   const r = calcResult();
@@ -1192,8 +1204,6 @@ function paintCalc() {
   ans.textContent = `Ans ${C.ans}`;
 }
 // Switch modes on press, but repaint after the click so the slot you pressed still gets it.
-$('#calc').addEventListener('pointerdown', () => { if (!S.solved) mode = 'calc'; });
-$('#calc').addEventListener('click', () => paint());
 $('#ops').onclick = e => { const b = e.target.closest('[data-op]'); if (b) setOp(b.dataset.op); };
 $('#expr').onclick = e => {
   if (e.target.closest('.eq')) return place();
@@ -1228,7 +1238,7 @@ function dropTarget(x, y) {
   if (g && !locked(g.dataset.id) && g.dataset.id !== drag.v.from) return g;
   const nt = el && el.closest('.note');
   if (nt && nt.dataset.note !== drag.v.from) return nt;
-  return s && !$('#calc').hidden ? s : null;
+  return s && mode === 'calc' ? s : null;
 }
 const svgPoint = e => new DOMPoint(e.clientX, e.clientY).matrixTransform($('#svg').getScreenCTM().inverse());
 function endDrag(drop) {
