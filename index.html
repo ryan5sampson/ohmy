@@ -285,6 +285,14 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .group text { font: 700 10px var(--display); fill: var(--muted); dominant-baseline: middle; paint-order: stroke; stroke: var(--bg); stroke-width: 5px; }
 .group.on rect { stroke: var(--mine); opacity: 1; stroke-width: 2; }
 .group.on text { fill: var(--mine); }
+#bgHit { fill: transparent; }
+.expert #bgHit { touch-action: none; cursor: crosshair; }
+#lasso { display: none; fill: color-mix(in srgb, var(--mine) 10%, transparent); stroke: var(--mine); stroke-width: 1.6; stroke-dasharray: 6 4; pointer-events: none; }
+#lasso.on { display: inline; }
+.ungroup { cursor: pointer; }
+.ungroup circle { fill: var(--cell); }
+.ungroup path { stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; }
+.gcard .cardbg { stroke-dasharray: 6 3; }
 .gsym { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 3 2.5; }
 .cardbg { fill: var(--card); stroke: var(--ink); stroke-width: 2; }
 .lbl { font: 700 13px var(--display); fill: var(--ink); }
@@ -602,7 +610,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
-        <dt><span class="chip">Groups</span></dt><dd>Expert circuits outline each group of resistors with a dashed line and tag it G1, G2, and so on. Each group gets its own card under the circuit: its voltage, current, and combined resistance. Solve from the inside out, then back.</dd>
+        <dt><span class="chip">Groups</span></dt><dd>In Expert puzzles, drag a box around two or more resistors to group them. The group gets a dashed outline and its own card for its voltage, current, and combined resistance. Group boxes are for your working: they aren't checked, and you don't need them to win. Tap × on the card to remove a group.</dd>
       </dl>
       <h4>Puzzles</h4>
       <p>Easy uses whole numbers, Medium one decimal place, and Hard two. Classic gives you the battery voltage and every resistance. Mixed gives you any mix of values. Meter puzzles start with too few clues, so you measure the fewest boxes you can and try to match par.</p>
@@ -759,7 +767,7 @@ function showHome() {
   if (pr.s) $('#ps' + pr.s).checked = true;
   styleNote();
 }
-const styleNote = () => { $('#styleNote').textContent = NOTE[practice().s] + (practice().d === 'X' ? ' Expert circuits nest groups four deep, and each group gets its own boxes.' : ''); };
+const styleNote = () => { $('#styleNote').textContent = NOTE[practice().s] + (practice().d === 'X' ? ' Expert circuits nest groups four deep. Drag a box around resistors to group them and work out each group’s values.' : ''); };
 const practice = () => ({ d: $('[name=pd]:checked').value, s: $('[name=ps]:checked').value });
 $('#home').addEventListener('change', e => {
   if (e.target.name !== 'pd' && e.target.name !== 'ps') return;
@@ -785,7 +793,7 @@ const given = id => cells[id].given && !coded(id);
 const valOf = id => given(id) ? fmt(cells[id].value) : S.vals[id] || '';
 const right = id => { const v = valOf(id); return v !== '' && Math.abs(parseFloat(v) - cells[id].value) < 1e-6; };
 const openCells = () => P.cells.filter(c => !given(c.id));
-const label = c => c.id === 'B.R' ? 'Total resistance' : `${c.part === 'B' ? 'Battery' : c.part[0] === 'G' ? 'Group ' + c.part.slice(1) : c.part} ${O.Q[c.q]}`;
+const label = c => c.id === 'B.R' ? 'Total resistance' : `${c.part === 'B' ? 'Battery' : c.free ? 'Group ' + c.who : c.part} ${O.Q[c.q]}`;
 const short = c => c.id === 'B.R' ? 'Total' : c.part === 'B' ? 'Bat' : c.part;
 const locked = id => given(id) || S.meas[id] || S.solved;
 const meterLeft = () => P.meter - S.used;
@@ -794,7 +802,8 @@ const save = () => store.set(P.code, S);
 function openGame(code) {
   P = O.puzzle(code);
   cells = Object.fromEntries(P.cells.map(c => [c.id, c]));
-  S = Object.assign({ vals: {}, meas: {}, wrong: {}, used: 0, solved: false, notes: [], nn: 0 }, store.get(P.code, {}));
+  S = Object.assign({ vals: {}, meas: {}, wrong: {}, used: 0, solved: false, notes: [], nn: 0, groups: [], gn: 0 }, store.get(P.code, {}));
+  groupCells();
   sel = (openCells().find(c => !S.vals[c.id] && !S.meas[c.id]) || {}).id || null;
   if (S.solved) sel = null;
   mode = 'input'; C = { op: 'div', slots: [slot(), slot()], at: 0, target: null, ans: null };
@@ -802,6 +811,7 @@ function openGame(code) {
   $('#gTitle').textContent = daily ? `Daily ${DIFF[P.diff]}` : `${DIFF[P.diff]} · ${STYLE[P.style]}`;
   $('#gSub').textContent = daily ? `${STYLE[P.style]} · ${P.code}` : P.code;
   drawCircuit();
+  $('#svg').classList.toggle('expert', P.diff === 'X');
   $('#home').hidden = true; $('#rush').hidden = true; $('#game').hidden = false;
   $('#svg').classList.toggle('live', S.solved);
   paint();
@@ -810,7 +820,7 @@ function openGame(code) {
 
 /* ---------- Circuit drawing ---------- */
 // Series runs down the screen, parallel branches sit side by side.
-const CW = 132, CH = 66, GS = 22, GP = 14, T = 16, M = 10, RAIL = 26, PAD = 9;
+const CW = 132, CH = 66, GS = 22, GP = 14, T = 16, M = 10, RAIL = 26;
 const pts = (...p) => { let d = ''; for (let i = 0; i < p.length; i += 2) d += (i ? 'L' : 'M') + p[i] + ' ' + p[i + 1]; return `<path class="w" d="${d}"/>`; };
 const BAND = ['#1a1a1a', '#7a4a1e', '#d7261e', '#f47b20', '#FFE600', '#2e9e44', '#2f5fd0', '#8a3fc2', '#8c8c8c', '#f4f4f4'];
 function bands(R) { // real resistor color code: two digits and a multiplier
@@ -826,7 +836,6 @@ function size(n) {
   const w = n.kids.map(k => k.w), h = n.kids.map(k => k.h);
   if (n.t === 'S') { n.w = Math.max(...w); n.h = h.reduce((a, b) => a + b) + GS * (h.length - 1); }
   else { n.w = w.reduce((a, b) => a + b) + GP * (w.length - 1); n.h = Math.max(...h) + 2 * T; }
-  if (n.name) { n.w += 2 * PAD; n.h += 2 * PAD; } // Expert groups get a dashed outline
 }
 // demo: optional {id: text} for help pictures. '12' is a clue, '*2' an answer, '?' the box to find.
 // What the small label on each box says: units, Ohm's-law letters, or both.
@@ -855,25 +864,19 @@ function card(part, x, y, qs, i, R, demo) {
   return s + '</g>';
 }
 function circuitSvg(tree, demo) {
-  const out = { w: [], c: [], d: [], g: [], rects: [], at: {} };
+  const out = { w: [], c: [], d: [], rects: [], at: {} };
   const put = (part, x, y) => { out.rects.push({ x, y, w: CW, h: CH }); out.at[part] = { x: x + CW / 2, y: y + CH / 2 }; };
   let n = 1;
   size(tree);
   (function draw(node, x, y, w) {
     const cx = x + w / 2;
     if (!node.kids) { put(node.name, cx - CW / 2, y); return out.c.push(card(node.name, cx - CW / 2, y, ['V', 'I', 'R'], n++, node.R, demo)); }
-    if (node.name) { // an Expert group: outline and tag it, then draw its insides within the padding
-      out.g.push(`<g class="group" data-group="${node.name}"><rect x="${x}" y="${y}" width="${w}" height="${node.h}" rx="12"/><text x="${x + 8}" y="${y + 4}">${node.name}</text></g>`);
-      out.w.push(pts(cx, y, cx, y + PAD), pts(cx, y + node.h - PAD, cx, y + node.h));
-      x += PAD; y += PAD; w -= 2 * PAD;
-    }
     if (node.t === 'S') {
       let yy = y;
       node.kids.forEach((k, i) => { if (i) { out.w.push(pts(cx, yy, cx, yy + GS)); yy += GS; } draw(k, x, yy, w); yy += k.h; });
     } else {
-      const pad = node.name ? 2 * PAD : 0;
-      let xx = cx - (node.w - pad) / 2;
-      const yb = y + node.h - pad;
+      let xx = cx - node.w / 2;
+      const yb = y + node.h;
       out.d.push(`<circle class="dot" cx="${cx}" cy="${y}" r="4"/><circle class="dot" cx="${cx}" cy="${yb}" r="4"/>`);
       node.kids.forEach(k => {
         const kx = xx + k.w / 2;
@@ -890,28 +893,18 @@ function circuitSvg(tree, demo) {
   // Conventional current leaves + at the bottom of the battery, runs down
   // through the circuit, and returns up the left rail.
   out.w.push(pts(cx, yB + CH, cx, yB + CH + GS), pts(cx, y2, cx, y3, M + 4, y3, M + 4, M, cx, M, cx, yB));
-  // Expert group cards sit in a grid under the circuit, G1 first.
-  const groups = [];
-  (function walk(k) { if (k.kids) { if (k.name) groups.push(k); k.kids.forEach(walk); } })(tree);
-  const cols = Math.max(1, Math.floor((W + GP) / (CW + GP))), gx = M + RAIL + (W - (Math.min(cols, groups.length) * (CW + GP) - GP)) / 2;
-  groups.forEach((g, i) => {
-    const x = gx + (i % cols) * (CW + GP), y = y3 + GS + Math.floor(i / cols) * (CH + GP);
-    const names = (function ls(k) { return k.kids ? k.kids.flatMap(ls) : [k.name]; })(g);
-    put(g.name, x, y); out.c.push(card(g.name, x, y, ['V', 'I', 'R'], n++, `${names[0]}–${names[names.length - 1]}`, demo));
-  });
-  const vh = groups.length ? y3 + GS + Math.ceil(groups.length / cols) * (CH + GP) - GP + M : y3 + M;
-  return { vw: M + RAIL + W + M, vh, rects: out.rects, at: out.at, html: out.g.join('') + out.w.join('') + out.d.join('') + out.c.join('') };
+  return { vw: M + RAIL + W + M, vh: y3 + M, rects: out.rects, at: out.at, html: out.w.join('') + out.d.join('') + out.c.join('') };
 }
 let base; // the drawn circuit: size, card rectangles, card centers
 function drawCircuit() {
   base = circuitSvg(P.tree);
   const svg = $('#svg');
-  svg.innerHTML = base.html + '<g id="notes"></g>';
+  svg.innerHTML = '<rect id="bgHit"/><g id="gOut"></g>' + base.html + '<g id="groups"></g><g id="notes"></g><rect id="lasso" rx="10"/>';
 }
 
 /* ---------- Notes ---------- */
 // Scratch values (like a combined resistance) that sit on the drawing.
-const NW = 68, NH = 40;
+const NW = 68, NH = 40, NOTE_W = NW, NOTE_H = NH;
 const isNote = id => typeof id === 'string' && id[0] === 'n';
 const note = id => S.notes.find(n => n.id === id);
 function noteSvg(n) {
@@ -927,10 +920,10 @@ function noteSvg(n) {
 // Closest spot to (ax, ay) that doesn't cover a card or another note.
 // ponytail: grid scan of the whole drawing, fine at this size.
 let view = { x: 0, y: 0, w: 0, h: 0 }; // the visible drawing area, set by paint()
-function freeSpot(ax, ay) {
-  const busy = base.rects.concat(S.notes.map(n => ({ x: n.x, y: n.y, w: NW, h: NH })));
+function freeSpot(ax, ay, NW = NOTE_W, NH = NOTE_H) {
+  const busy = base.rects.concat(S.notes.map(n => ({ x: n.x, y: n.y, w: NOTE_W, h: NOTE_H })), S.groups.map(g => ({ x: g.x, y: g.y, w: CW, h: CH })));
   const clear = (x, y) => busy.every(r => x >= r.x + r.w + 4 || x + NW + 4 <= r.x || y >= r.y + r.h + 4 || y + NH + 4 <= r.y);
-  const maxY = Math.max(base.vh, view.y + view.h - NH - 4, ...S.notes.map(n => n.y + NH)) + NH;
+  const maxY = Math.max(base.vh, view.y + view.h - NH - 4, ...busy.map(r => r.y + r.h)) + NH;
   const x0 = Math.min(M, view.x + 4), x1 = Math.max(base.vw - NW - M, view.x + view.w - NW - 4);
   let best = { x: M, y: maxY }, bd = Infinity;
   for (let y = Math.min(M, view.y + 4); y <= maxY; y += 6) for (let x = x0; x <= x1; x += 6) {
@@ -943,6 +936,49 @@ function addNote(ax, ay, props) {
   const at = freeSpot(ax, ay), n = Object.assign({ id: 'n' + ++S.nn, x: at.x, y: at.y, t: '', u: '', label: '' }, props);
   S.notes.push(n);
   return n;
+}
+/* ---------- Groups (Expert) ---------- */
+// Drag a box around resistors to group them. A group gets a card for its V, I,
+// and R, for your own working: those boxes aren't checked and aren't needed to win.
+const groupName = parts => {
+  const n = parts.map(p => +p.slice(1)).sort((a, b) => a - b);
+  return n.every((x, i) => !i || x === n[i - 1] + 1) ? `R${n[0]}–R${n[n.length - 1]}` : n.map(x => 'R' + x).join(',');
+};
+function groupCells() {
+  for (const id in cells) if (cells[id].free) delete cells[id];
+  for (const g of S.groups) for (const q of 'VIR') cells[`${g.name}.${q}`] = { id: `${g.name}.${q}`, part: g.name, q, free: true, who: groupName(g.parts) };
+}
+function outline(g) { // the members' cards, padded a little more for each group nested inside
+  const rs = g.parts.map(p => base.at[p]), inner = S.groups.filter(h => h !== g && h.parts.length < g.parts.length && h.parts.every(p => g.parts.includes(p))).length;
+  const pad = 7 + 7 * inner, x = Math.min(...rs.map(r => r.x)) - CW / 2 - pad, y = Math.min(...rs.map(r => r.y)) - CH / 2 - pad;
+  return { x, y, w: Math.max(...rs.map(r => r.x)) + CW / 2 + pad - x, h: Math.max(...rs.map(r => r.y)) + CH / 2 + pad - y };
+}
+function addGroup(parts) {
+  if (parts.length < 2) return toast('Box at least two resistors to group them');
+  const key = [...parts].sort().join();
+  let g = S.groups.find(h => [...h.parts].sort().join() === key);
+  if (!g) {
+    g = { name: 'G' + ++S.gn, parts };
+    const o = outline(g), at = freeSpot(o.x + o.w + CW / 2, o.y + CH / 2, CW, CH);
+    Object.assign(g, at);
+    S.groups.push(g);
+    groupCells();
+  }
+  if (mode === 'calc') C.target = null; else { mode = 'input'; setSel(`${g.name}.R`); }
+  buzz(8); save(); paint();
+}
+function ungroup(name) {
+  S.groups = S.groups.filter(g => g.name !== name);
+  for (const q of 'VIR') delete S.vals[`${name}.${q}`];
+  if (sel && sel.startsWith(name + '.')) sel = null;
+  if (C.target && C.target.startsWith(name + '.')) C.target = null;
+  groupCells(); save(); paint();
+}
+function paintGroups() {
+  $('#gOut').innerHTML = S.groups.map(g => { const o = outline(g); return `<g class="group" data-group="${g.name}"><rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="12"/><text x="${o.x + 8}" y="${o.y}">${g.name}</text></g>`; }).join('');
+  $('#groups').innerHTML = S.groups.map(g => card(g.name, g.x, g.y, ['V', 'I', 'R'], 0, groupName(g.parts)).replace('class="card', 'class="card gcard') +
+    `<g class="ungroup" data-ungroup="${g.name}" role="button" tabindex="0" aria-label="Remove group ${groupName(g.parts)}" transform="translate(${g.x + CW - 16} ${g.y + 11})"><circle r="9"/><path d="M-3.5 -3.5l7 7M3.5 -3.5l-7 7"/></g>`).join('');
+  for (const t of document.querySelectorAll('.gcard .lbl')) if (t.getComputedTextLength() > CW - 60) { t.setAttribute('textLength', CW - 60); t.setAttribute('lengthAdjust', 'spacingAndGlyphs'); }
 }
 function tapEmpty(e) {
   if (S.solved || mode === 'meter') return;
@@ -992,7 +1028,7 @@ function paint() {
   const bd = $('#board'), cs = getComputedStyle(bd);
   const bw = bd.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
   const bh = bd.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-  const vh = Math.max(base.vh, ...S.notes.map(n => n.y + NH + M));
+  const vh = Math.max(base.vh, ...S.notes.map(n => n.y + NH + M), ...S.groups.map(g => g.y + CH + M));
   if (bw > 0) {
     const s = Math.min(bw / base.vw, wide() ? 2.2 : 1.3, wide() ? bh / vh : Infinity);
     const W = bw / s, H = Math.max(vh, bh / s);
@@ -1000,7 +1036,9 @@ function paint() {
     svg.setAttribute('viewBox', `${view.x} ${view.y} ${W} ${H}`);
     svg.style.width = bw + 'px';
     svg.style.height = H * s + 'px';
+    Object.entries({ x: view.x, y: view.y, width: W, height: H }).forEach(([k, v]) => $('#bgHit').setAttribute(k, v));
   }
+  paintGroups();
   $('#notes').innerHTML = S.notes.map(noteSvg).join('');
   // Squeeze a long label like "Ω R1+R2+R3" to fit left of the grip dots.
   for (const t of document.querySelectorAll('#notes .nl')) {
@@ -1061,13 +1099,14 @@ function paint() {
 
 /* ---------- Input ---------- */
 function setSel(id) {
-  if (settings.instant && sel && !isNote(sel) && sel !== id && S.vals[sel] && !right(sel)) S.wrong[sel] = 1;
+  if (settings.instant && sel && !isNote(sel) && !cells[sel].free && sel !== id && S.vals[sel] && !right(sel)) S.wrong[sel] = 1;
   sel = id;
 }
 function tapCell(id) {
   if (S.solved) return;
   const c = cells[id];
   if (mode === 'meter') {
+    if (c.free) return toast("Groups can't be measured");
     if (coded(id)) return toast('Read its color bands instead');
     if (c.given || S.meas[id]) return toast('That value is already known');
     return measure(id);
@@ -1303,6 +1342,16 @@ function dropTarget(x, y) {
 const svgPoint = e => new DOMPoint(e.clientX, e.clientY).matrixTransform($('#svg').getScreenCTM().inverse());
 function endDrag(drop) {
   if (!drag) return;
+  if (drag.box) {
+    const { on, r: b } = drag;
+    drag = null;
+    $('#lasso').classList.remove('on');
+    if (!on) return;
+    noClick = true;
+    // Every resistor whose card center is inside the box joins the group.
+    if (drop) addGroup(Object.keys(base.at).filter(p => p !== 'B' && base.at[p].x > b.x && base.at[p].x < b.x + b.w && base.at[p].y > b.y && base.at[p].y < b.y + b.h));
+    return;
+  }
   if (drag.move) { const on = drag.on; drag = null; if (on) { noClick = true; save(); paint(); } return; }
   const { v, on, over } = drag;
   drag = null;
@@ -1335,11 +1384,24 @@ addEventListener('pointerdown', e => {
     drag = { move: n, dx: p.x - n.x, dy: p.y - n.y, x: e.clientX, y: e.clientY, on: false };
     return;
   }
+  if (e.target.id === 'bgHit' && P.diff === 'X' && mode !== 'meter') {
+    drag = { box: svgPoint(e), x: e.clientX, y: e.clientY, on: false };
+    return;
+  }
   const v = dragSource(e.target);
   if (v) drag = { v, x: e.clientX, y: e.clientY, on: false, over: null };
 });
 addEventListener('pointermove', e => {
   if (!drag || !e.isPrimary) return;
+  if (drag.box) { // Expert: stretch a box from where you pressed
+    if (!drag.on && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+    drag.on = true;
+    const a = drag.box, b = svgPoint(e), l = $('#lasso');
+    drag.r = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
+    Object.entries({ x: drag.r.x, y: drag.r.y, width: drag.r.w, height: drag.r.h }).forEach(([k, v]) => l.setAttribute(k, v));
+    l.classList.add('on');
+    return;
+  }
   if (drag.move) { // move the note itself
     if (!drag.on && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
     drag.on = true;
@@ -1364,14 +1426,17 @@ addEventListener('pointermove', e => {
     drag.over = t;
   }
 });
+// Chrome ignores touch-action on SVG shapes, so stop the page scrolling under a drag here.
+addEventListener('touchmove', e => { if (drag) e.preventDefault(); }, { passive: false });
 addEventListener('pointerup', e => { if (e.isPrimary) endDrag(true); });
 addEventListener('pointercancel', () => endDrag(false));
 // A finished drag also fires a click; don't treat it as a tap.
 addEventListener('click', e => { if (noClick) { noClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
 
 $('#board').addEventListener('click', e => {
-  const g = e.target.closest('.cell[data-id]'), nt = e.target.closest('.note');
-  if (g) tapCell(g.dataset.id);
+  const g = e.target.closest('.cell[data-id]'), nt = e.target.closest('.note'), ug = e.target.closest('[data-ungroup]');
+  if (ug) { if (!S.solved) ungroup(ug.dataset.ungroup); }
+  else if (g) tapCell(g.dataset.id);
   else if (nt) tapNote(nt.dataset.note);
   else if (!e.target.closest('.card')) tapEmpty(e);
 });

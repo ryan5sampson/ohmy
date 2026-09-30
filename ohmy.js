@@ -159,11 +159,6 @@
       { id: 'B.I', part: 'B', q: 'I', v: tree.i, value: tree.I },
     ];
     for (const l of leaves) for (const q of 'VIR') cells.push({ id: `${l.name}.${q}`, part: l.name, q, v: l[q.toLowerCase()], value: l[q] });
-    // Expert puzzles also give each group of resistors its own boxes, G1 outermost.
-    if (diff === 'X') flat(tree).filter(n => n.kids && n !== tree).forEach((n, i) => {
-      n.name = `G${i + 1}`;
-      for (const q of 'VIR') cells.push({ id: `${n.name}.${q}`, part: n.name, q, v: n[q.toLowerCase()], value: n[q] });
-    });
     const ok = set => { const x = []; for (const c of set) x[c.v] = c.value; const s = solve(eqs, x); return cells.every(c => s[c.v] !== undefined); };
 
     let given;
