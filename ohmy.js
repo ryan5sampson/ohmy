@@ -5,17 +5,18 @@
   'use strict';
 
   const ABC = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford base32: no I, L, O, U
-  const DP = { E: 0, M: 1, H: 2 };                // decimal places per difficulty
+  const DP = { E: 0, M: 1, H: 2, X: 1 };          // decimal places per difficulty
   const SPEC = {                                  // resistor count, widest parallel span
     E: { n: [2, 3], w: 2, need: () => true },
     M: { n: [3, 5], w: 3, need: t => some(t, x => x.t === 'P') },
     H: { n: [5, 7], w: 3, need: t => some(t, x => x.t === 'P' && x.kids.some(k => k.t === 'S')) },
+    X: { n: [6, 8], w: 4, need: t => depth(t) >= 4 }, // Expert: groups nested four deep, like a ladder
   };
   const R_WHOLE = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30];
   const R_HALF = R_WHOLE.concat([0.5, 1.5, 2.5, 7.5]);
-  const RES = { E: R_WHOLE, M: R_HALF, H: R_HALF.concat([1.2, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2]) };
-  const AMPS = { E: r => int(r, 1, 6), M: r => int(r, 1, 40) / 10, H: r => int(r, 1, 300) / 100 };
-  const DROP = { E: 1, M: 2, H: 2 }; // meter puzzles: clues removed past the minimum
+  const RES = { E: R_WHOLE, M: R_HALF, X: R_WHOLE, H: R_HALF.concat([1.2, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2]) };
+  const AMPS = { E: r => int(r, 1, 6), M: r => int(r, 1, 40) / 10, H: r => int(r, 1, 300) / 100, X: r => int(r, 1, 40) / 10 };
+  const DROP = { E: 1, M: 2, H: 2, X: 2 }; // meter puzzles: clues removed past the minimum
   const HINTS = 3;                   // meter charges in a normal puzzle
   const UNIT = { V: 'V', I: 'A', R: 'Ω' };
   const Q = { V: 'voltage', I: 'current', R: 'resistance' };
@@ -31,6 +32,7 @@
   const int = (r, lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
   const pick = (r, a) => a[Math.floor(r() * a.length)];
   const sum = a => a.reduce((s, x) => s + x, 0);
+  const depth = n => n.kids ? 1 + Math.max(...n.kids.map(depth)) : 0;
   const some = (n, f) => f(n) || (n.kids || []).some(k => some(k, f));
   function shuffle(r, a) {
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -39,11 +41,11 @@
   const fits = (x, dp) => x > 0 && x < 1000 && Math.abs(x * 10 ** dp - Math.round(x * 10 ** dp)) < 1e-6;
   const round = (x, dp) => Math.round(x * 10 ** dp) / 10 ** dp;
 
-  // Codes look like MX-7K3Q9: difficulty (E/M/H), style (C classic, X mixed,
+  // Codes look like MX-7K3Q9: difficulty (E/M/H/X), style (C classic, X mixed,
   // P meter puzzle), then a 25-bit seed.
   function parseCode(raw) {
     const s = String(raw || '').toUpperCase().replace(/[IL]/g, '1').replace(/O/g, '0').replace(/[^0-9A-Z]/g, '');
-    const m = /^([EMH])([CXP])([0-9A-Z]{5})$/.exec(s);
+    const m = /^([EMHX])([CXP])([0-9A-Z]{5})$/.exec(s);
     return m && [...m[3]].every(c => ABC.includes(c)) ? `${m[1]}${m[2]}-${m[3]}` : null;
   }
   function encode(n) {
@@ -157,6 +159,11 @@
       { id: 'B.I', part: 'B', q: 'I', v: tree.i, value: tree.I },
     ];
     for (const l of leaves) for (const q of 'VIR') cells.push({ id: `${l.name}.${q}`, part: l.name, q, v: l[q.toLowerCase()], value: l[q] });
+    // Expert puzzles also give each group of resistors its own boxes, G1 outermost.
+    if (diff === 'X') flat(tree).filter(n => n.kids && n !== tree).forEach((n, i) => {
+      n.name = `G${i + 1}`;
+      for (const q of 'VIR') cells.push({ id: `${n.name}.${q}`, part: n.name, q, v: n[q.toLowerCase()], value: n[q] });
+    });
     const ok = set => { const x = []; for (const c of set) x[c.v] = c.value; const s = solve(eqs, x); return cells.every(c => s[c.v] !== undefined); };
 
     let given;

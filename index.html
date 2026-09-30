@@ -145,6 +145,7 @@ button:disabled { cursor: default; opacity: .4; }
 #rushLearn { align-content: start; }
 #rushLearn .rq { margin: 0; }
 .seg.two { grid-template-columns: 1fr 1fr; }
+.seg.four { grid-template-columns: repeat(4, 1fr); }
 .tols.five { grid-template-columns: repeat(5, 1fr); }
 .tols.five button { font-size: 14px; gap: 4px; }
 #cColors { display: grid; gap: 8px; }
@@ -280,6 +281,11 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 /* Circuit drawing */
 .w { fill: none; stroke: var(--wire); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .dot { fill: var(--wire); }
+.group rect { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 5 4; opacity: .55; }
+.group text { font: 700 10px var(--display); fill: var(--muted); dominant-baseline: middle; paint-order: stroke; stroke: var(--bg); stroke-width: 5px; }
+.group.on rect { stroke: var(--mine); opacity: 1; stroke-width: 2; }
+.group.on text { fill: var(--mine); }
+.gsym { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 3 2.5; }
 .cardbg { fill: var(--card); stroke: var(--ink); stroke-width: 2; }
 .lbl { font: 700 13px var(--display); fill: var(--ink); }
 .sym { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
@@ -426,10 +432,11 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 
   <section>
     <h2>Practice</h2>
-    <fieldset class="seg" aria-label="Difficulty">
+    <fieldset class="seg four" aria-label="Difficulty">
       <label><input type="radio" name="pd" id="pdE" value="E" checked><span>Easy</span></label>
       <label><input type="radio" name="pd" id="pdM" value="M"><span>Medium</span></label>
       <label><input type="radio" name="pd" id="pdH" value="H"><span>Hard</span></label>
+      <label><input type="radio" name="pd" id="pdX" value="X"><span>Expert</span></label>
     </fieldset>
     <fieldset class="seg" aria-label="Puzzle type">
       <label><input type="radio" name="ps" id="psC" value="C" checked><span>Classic</span></label>
@@ -595,6 +602,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
+        <dt><span class="chip">Groups</span></dt><dd>Expert circuits outline each group of resistors with a dashed line and tag it G1, G2, and so on. Each group gets its own card under the circuit: its voltage, current, and combined resistance. Solve from the inside out, then back.</dd>
       </dl>
       <h4>Puzzles</h4>
       <p>Easy uses whole numbers, Medium one decimal place, and Hard two. Classic gives you the battery voltage and every resistance. Mixed gives you any mix of values. Meter puzzles start with too few clues, so you measure the fewest boxes you can and try to match par.</p>
@@ -715,7 +723,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 'use strict';
 const O = window.Ohmy;
 const $ = s => document.querySelector(s);
-const DIFF = { E: 'Easy', M: 'Medium', H: 'Hard' };
+const DIFF = { E: 'Easy', M: 'Medium', H: 'Hard', X: 'Expert' };
 const STYLE = { C: 'Classic', X: 'Mixed', P: 'Meter' };
 const NOTE = {
   C: 'You get the battery voltage and every resistance.',
@@ -749,13 +757,14 @@ function showHome() {
   const pr = store.get('practice', {});
   if (pr.d) $('#pd' + pr.d).checked = true;
   if (pr.s) $('#ps' + pr.s).checked = true;
-  $('#styleNote').textContent = NOTE[practice().s];
+  styleNote();
 }
+const styleNote = () => { $('#styleNote').textContent = NOTE[practice().s] + (practice().d === 'X' ? ' Expert circuits nest groups four deep, and each group gets its own boxes.' : ''); };
 const practice = () => ({ d: $('[name=pd]:checked').value, s: $('[name=ps]:checked').value });
 $('#home').addEventListener('change', e => {
   if (e.target.name !== 'pd' && e.target.name !== 'ps') return;
   store.set('practice', practice());
-  $('#styleNote').textContent = NOTE[practice().s];
+  styleNote();
 });
 document.querySelectorAll('[data-daily]').forEach(b => b.onclick = () => go(O.dailyCode(today(), b.dataset.daily)));
 $('#newBtn').onclick = () => { const p = practice(); go(O.randomCode(p.d, p.s)); };
@@ -771,12 +780,12 @@ const go = code => { location.hash = code; };
 let P, S, cells, sel, mode, C;
 const fmt = x => String(O.round(x, P.dp));
 // With color-coding on, a given resistor value shows only as bands, and you type it in.
-const coded = id => settings.colorCode && cells[id].given && cells[id].q === 'R' && cells[id].part !== 'B';
+const coded = id => settings.colorCode && cells[id].given && cells[id].q === 'R' && cells[id].part[0] === 'R';
 const given = id => cells[id].given && !coded(id);
 const valOf = id => given(id) ? fmt(cells[id].value) : S.vals[id] || '';
 const right = id => { const v = valOf(id); return v !== '' && Math.abs(parseFloat(v) - cells[id].value) < 1e-6; };
 const openCells = () => P.cells.filter(c => !given(c.id));
-const label = c => c.id === 'B.R' ? 'Total resistance' : `${c.part === 'B' ? 'Battery' : c.part} ${O.Q[c.q]}`;
+const label = c => c.id === 'B.R' ? 'Total resistance' : `${c.part === 'B' ? 'Battery' : c.part[0] === 'G' ? 'Group ' + c.part.slice(1) : c.part} ${O.Q[c.q]}`;
 const short = c => c.id === 'B.R' ? 'Total' : c.part === 'B' ? 'Bat' : c.part;
 const locked = id => given(id) || S.meas[id] || S.solved;
 const meterLeft = () => P.meter - S.used;
@@ -801,7 +810,7 @@ function openGame(code) {
 
 /* ---------- Circuit drawing ---------- */
 // Series runs down the screen, parallel branches sit side by side.
-const CW = 132, CH = 66, GS = 22, GP = 14, T = 16, M = 10, RAIL = 26;
+const CW = 132, CH = 66, GS = 22, GP = 14, T = 16, M = 10, RAIL = 26, PAD = 9;
 const pts = (...p) => { let d = ''; for (let i = 0; i < p.length; i += 2) d += (i ? 'L' : 'M') + p[i] + ' ' + p[i + 1]; return `<path class="w" d="${d}"/>`; };
 const BAND = ['#1a1a1a', '#7a4a1e', '#d7261e', '#f47b20', '#FFE600', '#2e9e44', '#2f5fd0', '#8a3fc2', '#8c8c8c', '#f4f4f4'];
 function bands(R) { // real resistor color code: two digits and a multiplier
@@ -817,6 +826,7 @@ function size(n) {
   const w = n.kids.map(k => k.w), h = n.kids.map(k => k.h);
   if (n.t === 'S') { n.w = Math.max(...w); n.h = h.reduce((a, b) => a + b) + GS * (h.length - 1); }
   else { n.w = w.reduce((a, b) => a + b) + GP * (w.length - 1); n.h = Math.max(...h) + 2 * T; }
+  if (n.name) { n.w += 2 * PAD; n.h += 2 * PAD; } // Expert groups get a dashed outline
 }
 // demo: optional {id: text} for help pictures. '12' is a clue, '*2' an answer, '?' the box to find.
 // What the small label on each box says: units, Ohm's-law letters, or both.
@@ -828,6 +838,8 @@ function card(part, x, y, qs, i, R, demo) {
   let s = `<g class="card${dr && dr !== '?' ? ' known' : ''}" data-part="${part}" style="--d:${i * 90}ms" transform="translate(${x} ${y})"><rect class="cardbg" width="${CW}" height="${CH}" rx="10"/>`;
   if (part === 'B') {
     s += `<path class="sym" d="M10 6v12M15 9v6M5 12h5M15 12h5"/><text class="lbl" x="26" y="16">Battery totals</text>`;
+  } else if (part[0] === 'G') {
+    s += `<rect class="gsym" x="5" y="6" width="22" height="12" rx="3"/><text class="lbl" x="34" y="16">${part} · ${R}</text>`;
   } else {
     s += `<path class="sym" d="M6 12h4l2-5 3 10 3-10 3 10 2-5h4"/><text class="lbl" x="34" y="16">${part}</text>`;
     const b = bands(R);
@@ -843,19 +855,25 @@ function card(part, x, y, qs, i, R, demo) {
   return s + '</g>';
 }
 function circuitSvg(tree, demo) {
-  const out = { w: [], c: [], d: [], rects: [], at: {} };
+  const out = { w: [], c: [], d: [], g: [], rects: [], at: {} };
   const put = (part, x, y) => { out.rects.push({ x, y, w: CW, h: CH }); out.at[part] = { x: x + CW / 2, y: y + CH / 2 }; };
   let n = 1;
   size(tree);
   (function draw(node, x, y, w) {
     const cx = x + w / 2;
     if (!node.kids) { put(node.name, cx - CW / 2, y); return out.c.push(card(node.name, cx - CW / 2, y, ['V', 'I', 'R'], n++, node.R, demo)); }
+    if (node.name) { // an Expert group: outline and tag it, then draw its insides within the padding
+      out.g.push(`<g class="group" data-group="${node.name}"><rect x="${x}" y="${y}" width="${w}" height="${node.h}" rx="12"/><text x="${x + 8}" y="${y + 4}">${node.name}</text></g>`);
+      out.w.push(pts(cx, y, cx, y + PAD), pts(cx, y + node.h - PAD, cx, y + node.h));
+      x += PAD; y += PAD; w -= 2 * PAD;
+    }
     if (node.t === 'S') {
       let yy = y;
       node.kids.forEach((k, i) => { if (i) { out.w.push(pts(cx, yy, cx, yy + GS)); yy += GS; } draw(k, x, yy, w); yy += k.h; });
     } else {
-      let xx = cx - node.w / 2;
-      const yb = y + node.h;
+      const pad = node.name ? 2 * PAD : 0;
+      let xx = cx - (node.w - pad) / 2;
+      const yb = y + node.h - pad;
       out.d.push(`<circle class="dot" cx="${cx}" cy="${y}" r="4"/><circle class="dot" cx="${cx}" cy="${yb}" r="4"/>`);
       node.kids.forEach(k => {
         const kx = xx + k.w / 2;
@@ -872,7 +890,17 @@ function circuitSvg(tree, demo) {
   // Conventional current leaves + at the bottom of the battery, runs down
   // through the circuit, and returns up the left rail.
   out.w.push(pts(cx, yB + CH, cx, yB + CH + GS), pts(cx, y2, cx, y3, M + 4, y3, M + 4, M, cx, M, cx, yB));
-  return { vw: M + RAIL + W + M, vh: y3 + M, rects: out.rects, at: out.at, html: out.w.join('') + out.d.join('') + out.c.join('') };
+  // Expert group cards sit in a grid under the circuit, G1 first.
+  const groups = [];
+  (function walk(k) { if (k.kids) { if (k.name) groups.push(k); k.kids.forEach(walk); } })(tree);
+  const cols = Math.max(1, Math.floor((W + GP) / (CW + GP))), gx = M + RAIL + (W - (Math.min(cols, groups.length) * (CW + GP) - GP)) / 2;
+  groups.forEach((g, i) => {
+    const x = gx + (i % cols) * (CW + GP), y = y3 + GS + Math.floor(i / cols) * (CH + GP);
+    const names = (function ls(k) { return k.kids ? k.kids.flatMap(ls) : [k.name]; })(g);
+    put(g.name, x, y); out.c.push(card(g.name, x, y, ['V', 'I', 'R'], n++, `${names[0]}–${names[names.length - 1]}`, demo));
+  });
+  const vh = groups.length ? y3 + GS + Math.ceil(groups.length / cols) * (CH + GP) - GP + M : y3 + M;
+  return { vw: M + RAIL + W + M, vh, rects: out.rects, at: out.at, html: out.g.join('') + out.w.join('') + out.d.join('') + out.c.join('') };
 }
 let base; // the drawn circuit: size, card rectangles, card centers
 function drawCircuit() {
@@ -996,6 +1024,9 @@ function paint() {
     g.classList.toggle('target', mode === 'calc' && C.target === id);
     g.setAttribute('aria-label', `${label(c)}, ${v ? v + ' ' + O.UNIT[c.q] : coded(id) ? 'read the color bands' : 'empty'}${given(id) ? ', given' : ''}`);
   }
+  // Light up the outline of the group whose box is selected or targeted.
+  const cur = mode === 'calc' ? C.target : sel, cp = cur && cells[cur] && cells[cur].part;
+  for (const g of svg.querySelectorAll('.group')) g.classList.toggle('on', g.dataset.group === cp);
   for (const g of svg.querySelectorAll('.card')) {
     const r = cells[g.dataset.part + '.R'];
     g.classList.toggle('known', !!r && (r.given || !!S.meas[r.id] || S.solved));

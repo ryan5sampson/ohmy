@@ -20,7 +20,7 @@ function physics(n) {
 
 const t0 = Date.now();
 let count = 0;
-for (const d of 'EMH') for (const s of 'CXP') for (let k = 0; k < 60; k++) {
+for (const d of 'EMHX') for (const s of 'CXP') for (let k = 0; k < 60; k++) {
   const code = O.randomCode(d, s), p = O.puzzle(code);
   try {
     assert.strictEqual(JSON.stringify(O.puzzle(code).cells), JSON.stringify(p.cells), 'same code, same puzzle');
@@ -29,6 +29,8 @@ for (const d of 'EMH') for (const s of 'CXP') for (let k = 0; k < 60; k++) {
     if (p.dp) assert(p.cells.some(c => !O.fits(c.value, p.dp - 1)), 'uses its decimal places');
     const given = p.cells.filter(c => c.given).map(c => c.id);
     assert(p.cells.some(c => c.id === 'B.R' && !c.given && near(c.value, p.tree.R)), 'total resistance box');
+    const groups = flat(p.tree).filter(n => n.kids && n !== p.tree);
+    assert.strictEqual(p.cells.filter(c => c.part[0] === 'G').length, d === 'X' ? groups.length * 3 : 0, 'Expert has boxes for every group');
     if (s === 'P') {
       assert(!p.solvable(given) && p.par >= 1 && p.meter === p.par + 2, 'meter puzzle needs measuring');
     } else {
