@@ -591,7 +591,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <h4>Tools</h4>
       <dl class="tools">
         <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
-        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
+        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it, or tap open space to drop it into a new note there. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
@@ -922,6 +922,7 @@ function tapEmpty(e) {
   const p = new DOMPoint(e.clientX, e.clientY).matrixTransform($('#svg').getScreenCTM().inverse());
   S.notes = S.notes.filter(n => n.t); // drop the empty note you tapped away from
   const n = addNote(p.x, p.y, {});
+  if (mode === 'calc' && dropAnswer(n.id)) return save(); // a finished calculation becomes a note right here
   if (mode === 'calc') C.target = n.id; else sel = n.id;
   save(); paint();
 }
@@ -1191,14 +1192,14 @@ function place() {
   const r = calcResult();
   if (!r) return;
   const d = dest(r), t = String(r.shown), used = C.slots.filter(s => s.t);
-  if (d && isNote(d)) Object.assign(note(d), { t, u: r.unit || note(d).u });
+  const name = used.every(s => s.src) ? used.map(s => s.src).join(C.op === 'par' ? '∥' : SYM[C.op]) : '';
+  if (d && isNote(d)) Object.assign(note(d), { t, u: r.unit || note(d).u, label: note(d).label || (name.length <= 10 ? name : '') });
   else if (d) {
     if (!fitsDp(r.shown)) return toast(P.dp ? `Round it to ${P.dp} decimal place${P.dp > 1 ? 's' : ''} first` : 'Round it to a whole number first');
     S.vals[d] = t; delete S.wrong[d];
   } else {
     const pts = used.map(s => s.from && !isNote(s.from) && base.at[cells[s.from].part]).filter(Boolean);
     const a = pts.length ? { x: pts.reduce((m, p) => m + p.x, 0) / pts.length, y: pts.reduce((m, p) => m + p.y, 0) / pts.length } : base.at.B;
-    const name = used.every(s => s.src) ? used.map(s => s.src).join(C.op === 'par' ? '∥' : SYM[C.op]) : '';
     addNote(a.x, a.y, { t, u: r.unit, label: name.length <= 10 ? name : '' });
     toast('Saved as a note');
   }
