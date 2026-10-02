@@ -202,8 +202,9 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .bar small { color: var(--muted); font: 600 13px var(--num); letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon { width: 44px; height: 44px; border: 0; background: none; border-radius: 10px; font-size: 22px; display: grid; place-items: center; }
 .icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-#board { flex: 1; min-height: 0; overflow: auto; padding: 10px 16px; display: flex; justify-content: center; align-items: flex-start; }
-#svg { width: 100%; height: auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+#board { flex: 1; min-height: 0; overflow: auto; padding: 10px 16px; display: flex; justify-content: center; align-items: flex-start; touch-action: pan-x pan-y; }
+#board.zoomed { justify-content: flex-start; align-items: flex-start; }
+#svg { flex: none; width: 100%; height: auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 #panel { padding: 8px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--edge); display: grid; gap: 8px; }
 #board, #panel { user-select: none; -webkit-user-select: none; }
 #status { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; color: var(--muted); height: 32px; }
@@ -608,6 +609,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
         <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
         <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it, or tap open space to drop it into a new note there. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
+        <dt><span class="chip">Zoom</span></dt><dd>Pinch the circuit with two fingers to zoom in or out, and swipe to look around. In Expert, swipe on a card, since dragging open space draws a group. On a laptop, pinch the trackpad.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
         <dt><span class="chip">Groups</span></dt><dd>In Expert puzzles, drag a box around two or more resistors to group them. The group gets a dashed outline and its own card for its voltage, current, and combined resistance. Group boxes are for your working: they aren't checked, and you don't need them to win. Tap × on the card to remove a group.</dd>
@@ -810,7 +812,7 @@ function openGame(code) {
   const daily = P.code === O.dailyCode(today(), P.diff);
   $('#gTitle').textContent = daily ? `Daily ${DIFF[P.diff]}` : `${DIFF[P.diff]} · ${STYLE[P.style]}`;
   $('#gSub').textContent = daily ? `${STYLE[P.style]} · ${P.code}` : P.code;
-  drawCircuit();
+  drawCircuit(); zoom = 1;
   $('#svg').classList.toggle('expert', P.diff === 'X');
   $('#home').hidden = true; $('#rush').hidden = true; $('#game').hidden = false;
   $('#svg').classList.toggle('live', S.solved);
@@ -1019,25 +1021,60 @@ $('#status').onclick = e => {
 /* ---------- Painting ---------- */
 const wide = () => matchMedia('(min-width: 900px)').matches;
 addEventListener('resize', () => { if (P && !$('#game').hidden) paint(); });
+// Pinch zoom just scales the drawing up; the board scrolls to show the rest.
+function fitBoard() {
+  const svg = $('#svg'), bd = $('#board'), cs = getComputedStyle(bd);
+  const bw = bd.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const bh = bd.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const vh = Math.max(base.vh, ...S.notes.map(n => n.y + NH + M), ...S.groups.map(g => g.y + CH + M));
+  if (bw <= 0) return;
+  const s = Math.min(bw / base.vw, wide() ? 2.2 : 1.3, wide() ? bh / vh : Infinity);
+  const W = bw / s, H = Math.max(vh, bh / s);
+  view = { x: (base.vw - W) / 2, y: wide() ? (vh - H) / 2 : 0, w: W, h: H };
+  svg.setAttribute('viewBox', `${view.x} ${view.y} ${W} ${H}`);
+  svg.style.width = bw * zoom + 'px';
+  svg.style.height = H * s * zoom + 'px';
+  bd.classList.toggle('zoomed', zoom > 1);
+  Object.entries({ x: view.x, y: view.y, width: W, height: H }).forEach(([k, v]) => $('#bgHit').setAttribute(k, v));
+}
+let zoom = 1;
+// Zoom to z, keeping the point under (mx, my) on screen where it was.
+function zoomAt(z, mx, my) {
+  z = Math.min(3, Math.max(1, z));
+  if (z === zoom) return;
+  const bd = $('#board'), r = bd.getBoundingClientRect(), k = z / zoom, cs = getComputedStyle(bd);
+  const pl = parseFloat(cs.paddingLeft), pt = parseFloat(cs.paddingTop);
+  const ox = bd.scrollLeft + mx - r.left - pl, oy = bd.scrollTop + my - r.top - pt; // point on the drawing
+  zoom = z; fitBoard();
+  bd.scrollLeft = ox * k + pl - (mx - r.left); bd.scrollTop = oy * k + pt - (my - r.top);
+}
+{
+  const bd = $('#board'), pts2 = e => [...e.touches].slice(0, 2).map(t => [t.clientX, t.clientY]);
+  let pinch = null;
+  bd.addEventListener('touchstart', e => {
+    if (e.touches.length !== 2) return;
+    endDrag(false); // a second finger turns a drag into a pinch
+    const [a, b] = pts2(e);
+    pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: zoom };
+  }, { passive: true });
+  bd.addEventListener('touchmove', e => {
+    if (!pinch || e.touches.length < 2) return;
+    e.preventDefault();
+    const [a, b] = pts2(e);
+    zoomAt(pinch.z * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+  }, { passive: false });
+  bd.addEventListener('touchend', e => { if (e.touches.length < 2) pinch = null; });
+  bd.addEventListener('gesturestart', e => e.preventDefault()); // Safari's own page zoom
+  // Trackpad pinch (and Ctrl + scroll wheel) on desktop.
+  bd.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); zoomAt(zoom * Math.exp(-e.deltaY / 200), e.clientX, e.clientY); } }, { passive: false });
+}
 function paint() {
   const svg = $('#svg');
   // An empty note disappears once it's no longer selected or targeted.
   S.notes = S.notes.filter(n => n.t || n.id === sel || (C && C.target === n.id));
   // The drawing fills the whole board, with the circuit centered in it, so notes
   // can go anywhere you can see. Scale is capped so small circuits don't balloon.
-  const bd = $('#board'), cs = getComputedStyle(bd);
-  const bw = bd.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  const bh = bd.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-  const vh = Math.max(base.vh, ...S.notes.map(n => n.y + NH + M), ...S.groups.map(g => g.y + CH + M));
-  if (bw > 0) {
-    const s = Math.min(bw / base.vw, wide() ? 2.2 : 1.3, wide() ? bh / vh : Infinity);
-    const W = bw / s, H = Math.max(vh, bh / s);
-    view = { x: (base.vw - W) / 2, y: wide() ? (vh - H) / 2 : 0, w: W, h: H };
-    svg.setAttribute('viewBox', `${view.x} ${view.y} ${W} ${H}`);
-    svg.style.width = bw + 'px';
-    svg.style.height = H * s + 'px';
-    Object.entries({ x: view.x, y: view.y, width: W, height: H }).forEach(([k, v]) => $('#bgHit').setAttribute(k, v));
-  }
+  fitBoard();
   paintGroups();
   $('#notes').innerHTML = S.notes.map(noteSvg).join('');
   // Squeeze a long label like "Ω R1+R2+R3" to fit left of the grip dots.
