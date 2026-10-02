@@ -611,7 +611,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <h4>Tools</h4>
       <dl class="tools">
         <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
-        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it, or tap open space to drop it into a new note there. Once you use an answer, the calculator clears. If you pick another operation before using it, the answer becomes that operation's first value. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
+        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it, or tap open space to drop it into a new note there. Once you use an answer, the calculator clears. If you pick another operation before using it, the answer becomes that operation's first value; anything else you'd entered clears. Tap the lit operation again to turn the calculator off and clear it, and Clear to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
         <dt><span class="chip">Zoom</span></dt><dd>Pinch the circuit with two fingers to zoom in or out, and swipe to look around. On a laptop, pinch the trackpad.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
@@ -1255,9 +1255,9 @@ const slot = () => ({ t: '', u: '', src: '', from: '' });
 // operations keeps your values), tap the lit one again to go back to boxes.
 function setOp(op) {
   if (S.solved) return;
-  if (mode === 'calc' && C.op === op) mode = 'input';
+  if (mode === 'calc' && C.op === op) { mode = 'input'; C.slots = [slot(), slot()]; C.at = 0; } // off clears it
   else { // a new operation starts fresh, except an unused answer becomes its first value
-    const r = calcResult();
+    const r = mode === 'calc' && calcResult();
     C.slots = [r ? { t: String(r.shown), u: r.unit, src: 'Ans', from: '' } : slot(), slot()];
     C.at = r ? 1 : 0; C.op = op; mode = 'calc';
   }
