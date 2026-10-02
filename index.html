@@ -49,12 +49,19 @@ button:disabled { cursor: default; opacity: .4; }
 /* Home */
 #home { max-width: 460px; margin: 0 auto; padding: 28px 16px 40px; display: grid; gap: 28px; }
 .brand { display: grid; gap: 6px; position: relative; }
-:root { --rush: #C8441B; --rush-ink: #FFF6EE; }
+:root { --rush: #C8441B; --rush-ink: #FFF6EE; --sym: #1C5D86; --sym-ink: #EEF6FB; }
 /* Folder tabs that hang from the top edge of the screen. */
 .rushBtn, .ohmyTab { border: 0; border-radius: 0 0 14px 14px; position: relative; }
 .rushBtn::before, .ohmyTab::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 300px; background: inherit; }
+.tabs { position: absolute; top: -28px; right: 0; display: flex; gap: 6px; z-index: 2; }
+.tabs .rushBtn { padding: 18px 9px 12px; font-size: 12px; letter-spacing: .05em; }
+.tabs .rushBtn svg { width: 44px; height: 20px; }
+.symTab { background: var(--sym) !important; color: var(--sym-ink) !important; }
+.symTab:active { background: #12445F !important; }
+.symTab svg path { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.symTab svg .f { fill: currentColor; stroke: none; }
 .rushBtn {
-  position: absolute; top: -28px; right: 0; background: var(--rush); color: var(--rush-ink);
+  background: var(--rush); color: var(--rush-ink);
   padding: 18px 16px 14px; display: grid; justify-items: center; gap: 6px;
   font: 700 14px/1.05 var(--display); letter-spacing: .1em; text-transform: uppercase; text-align: center;
   box-shadow: 0 4px 12px rgb(0 0 0 / .18); z-index: 2;
@@ -77,17 +84,62 @@ button:disabled { cursor: default; opacity: .4; }
 .rushBtn .lead { stroke: currentColor; }
 .rushBtn:active { background: #A8350F; }
 .rushBtn:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 3px; }
-#rush .bar { position: relative; background: var(--rush); color: var(--rush-ink); border-bottom: 0; }
-#rush .bar::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 300px; background: var(--rush); }
-#rush .bar b { font-style: italic; letter-spacing: .02em; }
-#rush .bar small { color: inherit; opacity: .85; }
+#rush { --tab: var(--rush); --tab-ink: var(--rush-ink); }
+#sym { --tab: var(--sym); --tab-ink: var(--sym-ink); }
+:is(#rush, #sym) .bar { position: relative; background: var(--tab); color: var(--tab-ink); border-bottom: 0; }
+:is(#rush, #sym) .bar::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 300px; background: var(--tab); }
+:is(#rush, #sym) .bar b { font-style: italic; letter-spacing: .02em; }
+:is(#rush, #sym) .bar small { color: inherit; opacity: .85; }
 #rush .chartBtn { color: inherit; border-color: currentColor; }
 #rushStart, #rushAgain { background: var(--rush); color: var(--rush-ink); }
 .lead { stroke: var(--ink); stroke-width: 2; fill: none; }
 .rbody { fill: var(--body); }
-#rush { height: 100%; display: flex; flex-direction: column; --rw: 560px; }
-#rush > .rpane { width: 100%; max-width: var(--rw); margin-inline: auto; }
-#rush .bar { padding-inline: max(8px, calc((100% - var(--rw)) / 2)); z-index: 1; }
+#rush, #sym { height: 100%; display: flex; flex-direction: column; --rw: 560px; }
+:is(#rush, #sym) > .rpane { width: 100%; max-width: var(--rw); margin-inline: auto; }
+:is(#rush, #sym) .bar { padding-inline: max(8px, calc((100% - var(--rw)) / 2)); z-index: 1; }
+/* Symbols */
+.ssym { width: 100%; color: var(--ink); }
+.ssym path, .ssym circle, .ssym rect { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ssym .f { fill: currentColor; stroke: none; }
+.ssym .d { stroke-dasharray: 5 5; }
+.ssym text { fill: currentColor; stroke: none; font-weight: 700; font-family: var(--text); text-anchor: middle; }
+.sreal { width: 100%; max-width: 280px; margin: 0 auto; display: block; background: #fff; border-radius: 10px; }
+.sprog { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--edge); }
+.sprog i { display: block; }
+.c0 { --c: var(--wrong); } .c1 { --c: #E0A100; } .c2 { --c: #2e9e44; }
+.slegend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--muted); }
+.slegend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; background: var(--c, var(--edge)); }
+.scat { font: 700 15px var(--display); letter-spacing: .04em; margin: 10px 0 0; }
+.sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.stile { display: grid; gap: 4px; padding: 8px 6px; background: var(--card); border: 2px solid var(--edge); border-bottom: 5px solid var(--c, var(--edge)); border-radius: 10px; font: 600 12px/1.2 var(--text); }
+#symQuiz { align-content: start; }
+/* The card scrolls on its own so the rating buttons stay on screen. */
+#symStudy { align-content: stretch; grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.sbar { display: flex; justify-content: space-between; font: 600 14px var(--num); letter-spacing: .04em; color: var(--muted); }
+.scard { display: grid; align-content: center; gap: 10px; overflow-y: auto; background: var(--card); border: 2px solid var(--ink); border-radius: 14px; padding: 16px; cursor: pointer; }
+.scard .ssym { max-width: 300px; margin: 0 auto; }
+.scard.open { align-content: start; }
+.scard.open .ssym { max-width: 200px; }
+.scard .sreal { max-width: 220px; }
+.scard h3 { font: 700 24px var(--display); margin: 0; text-align: center; }
+.scard h4 { font: 700 13px var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0; }
+.scard p, .scard ul { margin: 0; }
+.scard ul { padding-left: 20px; }
+.shint { text-align: center; color: var(--muted); }
+.sconf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.sconf button { padding: 12px 4px; border: 2px solid var(--c); border-radius: 10px; background: var(--card); font: 600 15px var(--display); }
+.sconf [aria-pressed="true"] { background: var(--c); color: #fff; }
+.qopts { display: grid; gap: 8px; }
+.qopts.pics { grid-template-columns: 1fr 1fr; }
+.qopts button { padding: 14px 10px; border: 2px solid var(--edge); border-radius: 10px; background: var(--card); font: 600 16px var(--text); }
+.qopts .ssym { max-width: 150px; margin: 0 auto; display: block; }
+.qopts button:disabled { opacity: 1; color: var(--ink); }
+.qopts .right { border-color: #2e9e44; background: color-mix(in srgb, #2e9e44 18%, var(--card)); }
+.qopts .wrong { border-color: var(--wrong); background: color-mix(in srgb, var(--wrong) 18%, var(--card)); }
+#qShow .ssym { max-width: 300px; margin: 0 auto; display: block; }
+#qWhy { margin: 0; }
+#symDone { text-align: center; }
+#sStudyBtn, #sAgain { background: var(--sym); color: var(--sym-ink); }
 .chartBtn { border: 2px solid var(--ink); background: none; border-radius: 9px; padding: 8px 10px; font: 600 13px var(--display); }
 .rpane { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; align-content: start; gap: 12px; }
 .rpane p { margin: 0; }
@@ -176,7 +228,7 @@ button:disabled { cursor: default; opacity: .4; }
 #cheat { max-height: calc(100% - 24px); }
 .ctab td:first-child { white-space: nowrap; }
 .rpane .ghost { padding: 12px; }
-.brand h1 { font: 700 56px/0.9 var(--display); letter-spacing: -0.02em; margin: 0; }
+.brand h1 { font: 700 min(56px, 12.5vw)/0.9 var(--display); letter-spacing: -0.02em; margin: 0; }
 .brand h1 span { color: var(--live); }
 .brand p { margin: 0; color: var(--muted); max-width: 32ch; }
 .brand svg { width: 100%; height: 26px; }
@@ -437,10 +489,16 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 
 <main id="home">
   <header class="brand">
+    <div class="tabs">
+    <button class="rushBtn symTab" id="symBtn" aria-label="Schematic symbols">
+      <svg viewBox="0 0 48 20" aria-hidden="true"><path d="M2 10h14M32 10h14M32 3v14"/><path class="f" d="M16 3v14l16-7z"/></svg>
+      <span>Symbols</span>
+    </button>
     <button class="rushBtn" id="rushBtn" aria-label="Resistor Rush">
       <svg viewBox="0 0 48 20" aria-hidden="true"><path d="M1 10h9M38 10h9" class="lead"/><rect x="9" y="3" width="30" height="14" rx="6" class="rbody"/><rect x="14" y="3" width="3.5" height="14" fill="#FFE600" class="band"/><rect x="20" y="3" width="3.5" height="14" fill="#8a3fc2" class="band"/><rect x="26" y="3" width="3.5" height="14" fill="#d7261e" class="band"/><rect x="33" y="3" width="3.5" height="14" fill="#c9a227" class="band"/></svg>
       <span>Resistor<br>Rush</span>
     </button>
+    </div>
     <h1>Ohm<span>y</span></h1>
     <svg viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 13h120l5-10 10 20 10-20 10 20 10-20 5 10h130"/></svg>
     <p>A daily circuit puzzle. Find every volt, amp, and ohm.</p>
@@ -541,6 +599,45 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <p id="rFinalText"></p>
     <button class="primary" id="rushAgain">Play again</button>
     <button class="ghost" id="rushHome">Home</button>
+  </section>
+</main>
+
+<main id="sym" hidden>
+  <header class="bar">
+    <button class="ohmyTab" id="ohmyTab2" aria-label="Back to Ohmy">Ohm<span>y</span></button>
+    <button class="icon" id="symBack" aria-label="Back to all symbols"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="title"><b>Symbols</b><small id="symSub">Schematic symbols</small></div>
+  </header>
+  <section id="symMenu" class="rpane">
+    <div class="sprog" id="sProg" aria-hidden="true"></div>
+    <div class="slegend" id="sLegend"></div>
+    <button class="primary" id="sStudyBtn">Study cards</button>
+    <button class="ghost" id="sQuizBtn" style="padding:12px">Quiz yourself</button>
+    <p class="note">Tap a symbol to study it. Rate how well you know each one; the quiz asks more about the ones you don't know yet.</p>
+    <div id="sGrid"></div>
+  </section>
+  <section id="symStudy" class="rpane" hidden>
+    <div class="sbar"><span id="sPos"></span><span id="sCat"></span></div>
+    <div class="scard" id="sCard" role="button" tabindex="0" aria-live="polite"></div>
+    <div class="sconf" id="sConf">
+      <button class="c0" data-c="0">Don't know</button><button class="c1" data-c="1">Kinda</button><button class="c2" data-c="2">Know it</button>
+    </div>
+    <div class="sbar"><button class="ghost" id="sPrev" style="padding:8px 14px">Back</button><button class="ghost" id="sNext" style="padding:8px 14px">Skip</button></div>
+  </section>
+  <section id="symQuiz" class="rpane" hidden>
+    <div class="sbar"><span id="qPos"></span><span id="qScore"></span></div>
+    <h3 class="rq" id="qPrompt"></h3>
+    <div id="qShow"></div>
+    <div class="qopts" id="qOpts"></div>
+    <p id="qWhy" aria-live="polite"></p>
+    <button class="primary" id="qNext" hidden>Next</button>
+  </section>
+  <section id="symDone" class="rpane" hidden>
+    <h3 class="rq" id="dScore"></h3>
+    <p id="dText"></p>
+    <div class="sgrid" id="dMissed"></div>
+    <button class="primary" id="sAgain">Another quiz</button>
+    <button class="ghost" id="sDoneBack" style="padding:12px">Back to all symbols</button>
   </section>
 </main>
 
@@ -746,6 +843,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 </dialog>
 
 <script src="ohmy.js"></script>
+<script src="symbols.js"></script>
 <script>
 'use strict';
 const O = window.Ohmy;
@@ -774,7 +872,7 @@ function toast(msg) {
 
 /* ---------- Home ---------- */
 function showHome() {
-  $('#game').hidden = true; $('#rush').hidden = true; $('#home').hidden = false;
+  $('#game').hidden = true; $('#rush').hidden = true; $('#sym').hidden = true; $('#home').hidden = false;
   $('#today').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   for (const b of document.querySelectorAll('[data-daily]')) {
     const done = store.get(O.dailyCode(today(), b.dataset.daily), {}).solved;
@@ -831,7 +929,7 @@ function openGame(code) {
   $('#gSub').textContent = daily ? `${STYLE[P.style]} · ${P.code}` : P.code;
   drawCircuit(); zoom = 1;
   $('#pad').classList.toggle('expert', P.diff === 'X'); picks = [];
-  $('#home').hidden = true; $('#rush').hidden = true; $('#game').hidden = false;
+  $('#home').hidden = true; $('#rush').hidden = true; $('#sym').hidden = true; $('#game').hidden = false;
   $('#svg').classList.toggle('live', S.solved);
   paint();
   if (!store.get('seenHelp', false)) { store.set('seenHelp', true); openHelp(); }
@@ -1813,7 +1911,7 @@ $('#lNext').onclick = () => { if (li === LEARN.length - 1) return rushStart(true
 $('#rShowMe').onclick = () => { if (R && !R.reveal) { R.shown = true; rushReveal(null); } };
 function stopRush() { if (R) { clearInterval(R.timer); R = null; } }
 function showRush() {
-  $('#home').hidden = true; $('#game').hidden = true; $('#rush').hidden = false;
+  $('#home').hidden = true; $('#game').hidden = true; $('#sym').hidden = true; $('#rush').hidden = false;
   const best = store.get('rushBest', 0);
   $('#rushBest').textContent = best ? `Best: ${best}` : '60-second resistor drill';
   $('#rIntroSvg').innerHTML = resistorSvg([BAND[4], BAND[7], BAND[2]], GOLD);
@@ -1948,9 +2046,120 @@ addEventListener('keydown', e => {
   if (k) { e.preventDefault(); rushKey(k); }
 });
 
+/* ---------- Symbols ---------- */
+// Study cards you rate by confidence, and a quiz that leans on the ones you know least.
+const SY = window.OhmySymbols.SYMBOLS;
+const symConf = () => store.get('symConf', {}); // id → 0 don't know, 1 kinda, 2 know it
+const setConf = (id, c) => { const all = symConf(); all[id] = c; store.set('symConf', all); };
+const symSvg = s => `<svg class="ssym" viewBox="0 0 120 72" aria-hidden="true">${s.sym}</svg>`;
+const shuf = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+let ST = { i: 0, open: false }, SQ = null;
+function symShow(which) {
+  for (const w of ['Menu', 'Study', 'Quiz', 'Done']) $('#sym' + w).hidden = w !== which;
+  $('#symBack').hidden = which === 'Menu';
+  $('#symSub').textContent = { Menu: 'Schematic symbols', Study: 'Study cards', Quiz: 'Quiz', Done: 'Quiz results' }[which];
+}
+function showSymbols() {
+  $('#home').hidden = true; $('#game').hidden = true; $('#rush').hidden = true; $('#sym').hidden = false;
+  symMenu();
+}
+function symMenu() {
+  const conf = symConf(), n = [0, 1, 2].map(c => SY.filter(s => conf[s.id] === c).length), fresh = SY.length - n[0] - n[1] - n[2];
+  $('#sProg').innerHTML = [2, 1, 0].map(c => `<i class="c${c}" style="width:${n[c] / SY.length * 100}%;background:var(--c)"></i>`).join('');
+  $('#sLegend').innerHTML = `<span class="c2">${n[2]} know it</span><span class="c1">${n[1]} kinda</span><span class="c0">${n[0]} don't know</span><span>${fresh} not rated</span>`;
+  const cats = [...new Set(SY.map(s => s.cat))];
+  $('#sGrid').innerHTML = cats.map(cat => `<h3 class="scat">${cat}</h3><div class="sgrid">` +
+    SY.map((s, i) => s.cat !== cat ? '' : `<button class="stile${conf[s.id] != null ? ' c' + conf[s.id] : ''}" data-i="${i}">${symSvg(s)}<span>${s.name}</span></button>`).join('') + '</div>').join('');
+  symShow('Menu');
+}
+function study(i) { ST = { i: (i + SY.length) % SY.length, open: false }; symShow('Study'); paintStudy(); }
+function paintStudy() {
+  const s = SY[ST.i], c = symConf()[s.id];
+  $('#sPos').textContent = `${ST.i + 1} of ${SY.length}`;
+  $('#sCat').textContent = s.cat;
+  $('#sCard').classList.toggle('open', ST.open);
+  $('#sCard').setAttribute('aria-label', ST.open ? s.name : 'Symbol card. Tap to see what it is.');
+  $('#sCard').innerHTML = symSvg(s) + (!ST.open ? '<p class="shint">What is it? Tap to see.</p>' :
+    `<h3>${s.name}</h3><p>${s.desc}</p><h4>Where you'll find it</h4><ul>${s.uses.map(u => `<li>${u}</li>`).join('')}</ul>` +
+    `<h4>What a real one looks like</h4><svg class="sreal" viewBox="0 0 160 100" role="img" aria-label="Drawing of a real ${s.name}">${s.real}</svg>`);
+  for (const b of $('#sConf').children) b.setAttribute('aria-pressed', +b.dataset.c === c);
+}
+function rate(c) {
+  setConf(SY[ST.i].id, c);
+  if (ST.i === SY.length - 1) { toast('That\'s every symbol'); return symMenu(); }
+  study(ST.i + 1);
+}
+// Quiz: 10 questions, picked so symbols you know less come up more.
+function startQuiz() {
+  const conf = symConf(), w = s => conf[s.id] == null ? 3 : [4, 2, 1][conf[s.id]], pool = SY.slice(), list = [];
+  while (list.length < 10) {
+    let t = Math.random() * pool.reduce((a, s) => a + w(s), 0), k = 0;
+    while ((t -= w(pool[k])) > 0) k++;
+    list.push(pool.splice(k, 1)[0]);
+  }
+  SQ = { list, n: 0, score: 0, missed: [] };
+  symShow('Quiz'); askQ();
+}
+function askQ() {
+  const s = SQ.list[SQ.n], same = shuf(SY.filter(x => x.cat === s.cat && x !== s)), other = shuf(SY.filter(x => x.cat !== s.cat));
+  SQ.opts = shuf([s, ...same.concat(other).slice(0, 3)]); SQ.done = false;
+  SQ.pics = Math.random() < .5; // show the name and pick the symbol, or the other way around
+  $('#qPos').textContent = `Question ${SQ.n + 1} of ${SQ.list.length}`;
+  $('#qScore').textContent = `${SQ.score} right`;
+  $('#qPrompt').textContent = SQ.pics ? `Which one is the ${s.name.replace(/ \(.*\)/, '')}?` : 'What is this symbol?';
+  $('#qShow').innerHTML = SQ.pics ? '' : symSvg(s);
+  $('#qOpts').className = 'qopts' + (SQ.pics ? ' pics' : '');
+  $('#qOpts').innerHTML = SQ.opts.map((o, j) => `<button data-j="${j}"${SQ.pics ? ` aria-label="Option ${j + 1}"` : ''}>${SQ.pics ? symSvg(o) : o.name}</button>`).join('');
+  $('#qWhy').innerHTML = ''; $('#qNext').hidden = true;
+}
+function answerQ(j) {
+  if (SQ.done) return;
+  SQ.done = true;
+  const s = SQ.list[SQ.n], ok = SQ.opts[j] === s, c = symConf()[s.id];
+  setConf(s.id, ok ? Math.min(2, (c ?? 0) + 1) : 0);
+  if (ok) SQ.score++; else SQ.missed.push(s);
+  [...$('#qOpts').children].forEach((b, k) => { b.classList.toggle('right', SQ.opts[k] === s); b.classList.toggle('wrong', k === j && !ok); b.disabled = true; });
+  $('#qWhy').innerHTML = `${ok ? 'Right!' : 'Not quite.'} <b>${s.name}</b>: ${s.desc}`;
+  $('#qScore').textContent = `${SQ.score} right`;
+  $('#qNext').textContent = SQ.n === SQ.list.length - 1 ? 'See results' : 'Next';
+  $('#qNext').hidden = false; $('#qNext').focus();
+  buzz(ok ? 8 : [20, 40, 20]);
+}
+function nextQ() {
+  if (++SQ.n < SQ.list.length) return askQ();
+  $('#dScore').textContent = `${SQ.score} of ${SQ.list.length}`;
+  $('#dText').textContent = SQ.missed.length ? 'Tap one you missed to study it.' : 'Every one right!';
+  $('#dMissed').innerHTML = SQ.missed.map(s => `<button class="stile c0" data-i="${SY.indexOf(s)}">${symSvg(s)}<span>${s.name}</span></button>`).join('');
+  symShow('Done');
+}
+$('#symBtn').onclick = () => { location.hash = 'symbols'; };
+$('#ohmyTab2').onclick = () => { location.hash = ''; };
+$('#symBack').onclick = symMenu;
+$('#sStudyBtn').onclick = () => { const conf = symConf(), i = SY.findIndex(s => conf[s.id] !== 2); study(i < 0 ? 0 : i); };
+$('#sQuizBtn').onclick = startQuiz;
+$('#sAgain').onclick = startQuiz;
+$('#sDoneBack').onclick = symMenu;
+$('#sGrid').onclick = $('#dMissed').onclick = e => { const b = e.target.closest('[data-i]'); if (b) study(+b.dataset.i); };
+$('#sCard').onclick = () => { ST.open = !ST.open; paintStudy(); };
+$('#sConf').onclick = e => { const b = e.target.closest('[data-c]'); if (b) rate(+b.dataset.c); };
+$('#sPrev').onclick = () => study(ST.i - 1);
+$('#sNext').onclick = () => study(ST.i + 1);
+$('#qOpts').onclick = e => { const b = e.target.closest('[data-j]'); if (b) answerQ(+b.dataset.j); };
+$('#qNext').onclick = nextQ;
+addEventListener('keydown', e => {
+  if ($('#sym').hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!$('#symStudy').hidden) {
+    if (e.key === ' ' || e.key === 'Enter') { if (e.target.tagName !== 'BUTTON' || e.target.id === 'sCard') { e.preventDefault(); $('#sCard').click(); } }
+    else if ('123'.includes(e.key) && e.key) rate(+e.key - 1);
+    else if (e.key === 'ArrowRight') study(ST.i + 1);
+    else if (e.key === 'ArrowLeft') study(ST.i - 1);
+  } else if (!$('#symQuiz').hidden && '1234'.includes(e.key) && e.key && !SQ.done) answerQ(+e.key - 1);
+});
+
 function route() {
   stopRush();
   if (location.hash === '#rush') return showRush();
+  if (location.hash === '#symbols') return showSymbols();
   const code = O.parseCode(location.hash.slice(1));
   code ? openGame(code) : showHome();
 }

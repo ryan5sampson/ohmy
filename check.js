@@ -43,4 +43,7 @@ assert.strictEqual(O.parseCode('MXOIL00'), 'MX-01100');
 assert.strictEqual(O.parseCode('ZX-12345'), null);
 assert.strictEqual(O.dailyCode('2026-09-27', 'H'), O.dailyCode('2026-09-27', 'H'));
 assert(['M', 'H'].every(d => O.dailyCode('2026-09-27', d)[1] === 'X'), 'Medium and Hard dailies are Mixed');
-console.log(`ok: ${count} puzzles in ${Date.now() - t0} ms`);
+const { SYMBOLS } = require('./symbols.js');
+assert.strictEqual(new Set(SYMBOLS.map(s => s.id)).size, SYMBOLS.length, 'symbol ids are unique');
+for (const s of SYMBOLS) assert(s.name && s.cat && s.sym && s.desc && s.uses.length && s.real, `symbol card ${s.id} is complete`);
+console.log(`ok: ${count} puzzles in ${Date.now() - t0} ms, ${SYMBOLS.length} symbol cards`);
