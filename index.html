@@ -134,12 +134,26 @@ button:disabled { cursor: default; opacity: .4; }
 .prac #rTime { font: 600 20px var(--display); align-self: center; color: var(--muted); }
 .prac #rScore::after { content: ' right'; }
 .peek {
-  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; align-self: center;
-  border: 2px solid var(--ink); border-radius: 22px; background: var(--card); font: 600 15px var(--display);
+  position: relative; width: 172px; height: 46px; padding: 0; align-self: center; color: var(--ink);
+  border: 2px solid var(--ink); border-radius: 23px; background: var(--key); font: 600 15px var(--display);
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
-.peek svg { width: 24px; height: 24px; }
-.peek[aria-pressed="true"] { background: var(--sel); color: #13201A; }
+/* Peek is a slide switch: hold the knob to peek, slide it right to keep peeking. */
+.pknob {
+  position: absolute; left: 2px; top: 2px; height: 38px; padding: 0 12px; display: flex; align-items: center; gap: 7px;
+  border-radius: 19px; background: var(--card); box-shadow: 0 1px 3px rgb(0 0 0 / .3);
+  transform: translateX(var(--dx, 0px)); transition: transform .22s cubic-bezier(.3, 1.4, .5, 1), background .15s;
+}
+.peek.sliding .pknob { transition: background .15s; }
+.pknob svg { width: 22px; height: 22px; }
+.peek .pside { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; gap: 2px; font: 700 12px var(--display); letter-spacing: .04em; color: var(--muted); transition: opacity .15s; }
+.peek .keep { right: 12px; }
+.peek .kept { left: 12px; opacity: 0; color: #13201A; }
+.peek .pside svg { width: 14px; height: 14px; }
+.peek[aria-pressed="true"] .pknob { background: var(--sel); color: #13201A; }
+.peek.locked { background: var(--sel); }
+.peek.locked .keep { opacity: 0; }
+.peek.locked .kept { opacity: 1; }
 #rPad .sw { font: 700 17px var(--num); }
 #rPad .dot { display: inline-block; width: 16px; height: 22px; border-radius: 4px; margin-right: 8px; vertical-align: -3px; border: 1px solid rgb(0 0 0 / .35); }
 #rushLearn { align-content: start; }
@@ -480,7 +494,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <svg class="rsvg" viewBox="0 0 300 80" aria-hidden="true" id="rIntroSvg"></svg>
     <p>Read or build as many resistors as you can in 60 seconds.</p>
     <p>Some show you the color bands: type the value and press Enter. Others give you the value: tap the colors, then press Enter. When there's a tolerance, pick it too.</p>
-    <p>Stuck? Hold <b>Peek</b> to see the numbers behind the colors, or open the chart. A resistor you peek at doesn't score, except in practice.</p>
+    <p>Stuck? Hold <b>Peek</b> to see the numbers behind the colors, or slide it right to keep them showing. You can also open the chart. A resistor you peek at doesn't score, except in practice.</p>
     <p class="note">On a keyboard: type values with k and M, press 0 to 9 for a color, G for gold, S for silver, and Enter to answer.</p>
     <button class="primary" id="rushStart">Start the 60-second rush</button>
     <button class="ghost" id="rushPractice">Practice, no timer</button>
@@ -512,7 +526,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     </div>
   </section>
   <section id="rushPlay" class="rpane" hidden>
-    <div class="rstat"><span id="rTime">60</span><button class="peek" id="rPeek" aria-pressed="false" aria-label="Peek: hold to see the numbers for each color"><svg viewBox="0 0 24 24" aria-hidden="true"><clipPath id="pkBox"><rect x="1" y="1" width="22" height="22" rx="5"/></clipPath><g clip-path="url(#pkBox)"><rect width="8" height="24" fill="#D7261E"/><rect x="8" width="8" height="24" fill="#2E9E44"/><rect x="16" width="8" height="24" fill="#2F5FD0"/></g><path d="M10 5L8 19M16 5l-2 14M5 9.5h14M4.5 14.5h14" fill="none" stroke="#13201A" stroke-width="4.4" stroke-linecap="round"/><path d="M10 5L8 19M16 5l-2 14M5 9.5h14M4.5 14.5h14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>Peek</button><span id="rScore">0</span></div>
+    <div class="rstat"><span id="rTime">60</span><button class="peek" id="rPeek" aria-pressed="false" aria-label="Peek: hold to see the numbers for each color, or slide right to keep them showing"><span class="pside keep" aria-hidden="true">KEEP<svg viewBox="0 0 14 14"><path d="M3 3l4 4-4 4M8 3l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="pside kept" aria-hidden="true"><svg viewBox="0 0 14 14"><rect x="2.5" y="6" width="9" height="6.5" rx="1.5" fill="currentColor"/><path d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>ON</span><span class="pknob"><svg viewBox="0 0 24 24" aria-hidden="true"><clipPath id="pkBox"><rect x="1" y="1" width="22" height="22" rx="5"/></clipPath><g clip-path="url(#pkBox)"><rect width="8" height="24" fill="#D7261E"/><rect x="8" width="8" height="24" fill="#2E9E44"/><rect x="16" width="8" height="24" fill="#2F5FD0"/></g><path d="M10 5L8 19M16 5l-2 14M5 9.5h14M4.5 14.5h14" fill="none" stroke="#13201A" stroke-width="4.4" stroke-linecap="round"/><path d="M10 5L8 19M16 5l-2 14M5 9.5h14M4.5 14.5h14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>Peek</span></button><span id="rScore">0</span></div>
     <div class="rcard" id="rCard">
       <p class="rq" id="rQ"></p>
       <svg class="rsvg" id="rSvg" viewBox="0 0 300 80" role="img"></svg>
@@ -1669,6 +1683,7 @@ function rushPaint() {
 function rushNext() {
   R.q = rushQuestion(); R.input = ''; R.bands = []; R.tol = null; R.peek = false; R.lock = false; R.reveal = false; R.shown = false;
   R.peekHold = false; $('#rPeek').setAttribute('aria-pressed', false); // a new resistor needs a fresh press to peek
+  if (peekLock) peek(true); // unless Peek is slid on
   $('#rCard').className = 'rcard';
   $('#rushPlay').classList.remove('revealing');
   $('#rSvg').setAttribute('viewBox', '0 0 300 80');
@@ -1761,6 +1776,7 @@ function rushShow(which) {
 function rushStart(practice) {
   stopRush();
   R = { q: null, score: 0, tries: 0, peeks: 0, t0: Date.now(), done: false, practice };
+  peekLock = false; peekBtn.classList.remove('locked'); peekBtn.style.setProperty('--dx', '0px'); // each run starts unlocked
   $('#rushPlay').classList.toggle('prac', practice);
   rushShow('Play'); rushNext();
   if (practice) $('#rTime').textContent = 'Practice';
@@ -1812,11 +1828,40 @@ function peek(on) {
   $('#rPeek').setAttribute('aria-pressed', on);
   rushPad(R.q.mode); rushPaint();
 }
-const peekBtn = $('#rPeek');
-peekBtn.addEventListener('pointerdown', e => { peekBtn.setPointerCapture(e.pointerId); peek(true); });
-for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) peekBtn.addEventListener(ev, () => peek(false));
-peekBtn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); peek(true); } });
-peekBtn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') peek(false); });
+// Slide the knob right to keep peeking (locked); tap or slide it back to turn it off.
+const peekBtn = $('#rPeek'), knob = peekBtn.querySelector('.pknob');
+let peekLock = false, slide = null;
+const travel = () => peekBtn.clientWidth - knob.offsetWidth - 4;
+function setLock(on) {
+  peekLock = on;
+  peekBtn.classList.toggle('locked', on);
+  peekBtn.style.setProperty('--dx', on ? travel() + 'px' : '0px');
+  peek(on);
+}
+peekBtn.addEventListener('pointerdown', e => {
+  peekBtn.setPointerCapture(e.pointerId);
+  slide = { x: e.clientX, dx: peekLock ? travel() : 0, moved: false };
+  peekBtn.classList.add('sliding');
+  peek(true);
+});
+peekBtn.addEventListener('pointermove', e => {
+  if (!slide) return;
+  if (Math.abs(e.clientX - slide.x) > 6) slide.moved = true;
+  peekBtn.style.setProperty('--dx', Math.min(travel(), Math.max(0, slide.dx + e.clientX - slide.x)) + 'px');
+});
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) peekBtn.addEventListener(ev, e => {
+  if (!slide) return;
+  const at = parseFloat(peekBtn.style.getPropertyValue('--dx')) || 0, was = peekLock, moved = slide.moved;
+  slide = null;
+  peekBtn.classList.remove('sliding');
+  // Past halfway locks it on. A tap on a locked switch turns it off; a plain hold just peeks.
+  setLock(e.type === 'pointerup' ? moved && at > travel() / 2 : was);
+});
+peekBtn.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); return setLock(e.key === 'ArrowRight'); }
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); peek(true); }
+});
+peekBtn.addEventListener('keyup', e => { if ((e.key === ' ' || e.key === 'Enter') && !peekLock) peek(false); });
 peekBtn.addEventListener('contextmenu', e => e.preventDefault());
 $('#rPad').onclick = e => { const b = e.target.closest('[data-r]'); if (b) rushKey(b.dataset.r); };
 $('#rushBtn').onclick = () => { location.hash = 'rush'; };
