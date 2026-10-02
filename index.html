@@ -611,7 +611,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <h4>Tools</h4>
       <dl class="tools">
         <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
-        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it, or tap open space to drop it into a new note there. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
+        <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it, or tap open space to drop it into a new note there. Once you use an answer, the calculator clears. If you pick another operation before using it, the answer becomes that operation's first value. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
         <dt><span class="chip">Zoom</span></dt><dd>Pinch the circuit with two fingers to zoom in or out, and swipe to look around. On a laptop, pinch the trackpad.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
@@ -1256,7 +1256,11 @@ const slot = () => ({ t: '', u: '', src: '', from: '' });
 function setOp(op) {
   if (S.solved) return;
   if (mode === 'calc' && C.op === op) mode = 'input';
-  else { C.op = op; mode = 'calc'; }
+  else { // a new operation starts fresh, except an unused answer becomes its first value
+    const r = calcResult();
+    C.slots = [r ? { t: String(r.shown), u: r.unit, src: 'Ans', from: '' } : slot(), slot()];
+    C.at = r ? 1 : 0; C.op = op; mode = 'calc';
+  }
   paint();
 }
 // Every operation takes two values; the + after the last one adds another.
@@ -1330,6 +1334,7 @@ function place() {
     toast('Saved as a note');
   }
   C.ans = r.shown; C.ansU = r.unit; C.target = null;
+  C.slots = [slot(), slot()]; C.at = 0; // a used answer clears the calculator
   buzz(8);
   after();
   return true;
@@ -1340,7 +1345,6 @@ function dropAnswer(id) {
   if (!calcResult()) return false;
   C.target = id;
   if (!place()) { C.target = null; return true; }
-  C.slots = [slot(), slot()]; C.at = 0;
   if (!S.solved) { mode = 'input'; if (!isNote(id)) setSel(id); }
   paint();
   return true;
@@ -1383,7 +1387,7 @@ function dragSource(el) {
   if (nt && note(nt.dataset.note).t) { const n = note(nt.dataset.note); return { t: n.t, u: n.u, src: n.label || 'Note', from: n.id }; }
   if (mode === 'calc' && el.closest && el.closest('.eq')) {
     const r = calcResult();
-    if (r && r.fits) return { t: String(r.shown), u: r.unit, src: 'Ans' };
+    if (r && r.fits) return { t: String(r.shown), u: r.unit, src: 'Ans', ans: true };
   }
   return null;
 }
@@ -1414,9 +1418,10 @@ function endDrag(drop) {
     nextEmpty();
     return paint();
   }
+  if (!over.dataset.note && !fitsDp(+v.t)) return toast('Too many decimals for this puzzle');
+  if (v.ans) { C.ans = +v.t; C.ansU = v.u; C.slots = [slot(), slot()]; C.at = 0; } // used, so clear the calculator
   if (over.dataset.note) { const n = note(over.dataset.note); Object.assign(n, { t: v.t, u: v.u || n.u }); save(); return paint(); }
   const id = over.dataset.id;
-  if (!fitsDp(+v.t)) return toast('Too many decimals for this puzzle');
   S.vals[id] = v.t; delete S.wrong[id];
   if (mode === 'calc') C.target = id; else { mode = 'input'; setSel(id); }
   after();
