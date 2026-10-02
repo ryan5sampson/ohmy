@@ -287,9 +287,12 @@ h2 span { text-transform: none; letter-spacing: 0; font-family: var(--text); fon
 .group.on rect { stroke: var(--mine); opacity: 1; stroke-width: 2; }
 .group.on text { fill: var(--mine); }
 #bgHit { fill: transparent; }
-.expert #bgHit { touch-action: none; cursor: crosshair; }
-#lasso { display: none; fill: color-mix(in srgb, var(--mine) 10%, transparent); stroke: var(--mine); stroke-width: 1.6; stroke-dasharray: 6 4; pointer-events: none; }
-#lasso.on { display: inline; }
+#svg.grouping .card[data-part^="R"] { cursor: pointer; }
+.card.pick .cardbg { stroke: var(--mine); stroke-width: 3; fill: color-mix(in srgb, var(--mine) 12%, var(--card)); }
+.where.grp { background: var(--mine); color: var(--bg); }
+.pad .gk { display: none; }
+.pad.expert .gk { display: block; }
+.pad.expert .zero { grid-column: span 2; }
 .ungroup { cursor: pointer; }
 .ungroup circle { fill: var(--cell); }
 .ungroup path { stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; }
@@ -559,6 +562,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
       <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
       <button data-k="meter" class="tool" aria-pressed="false">Meter<small id="mLeft"></small></button>
       <button data-k=".">.</button><button data-k="0" class="zero">0</button>
+      <button data-k="group" class="tool gk" aria-pressed="false">Group</button>
     </div>
   </div>
 </main>
@@ -609,10 +613,10 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
         <dt><span class="chip">Clear</span></dt><dd>Empties the selected box or note, or the calculator. ⌫ deletes one digit. To see wrong values as you go, turn on Show mistakes right away in Settings.</dd>
         <dt><span class="chip">Calc</span></dt><dd>Tap ×, ÷, +, −, or 1/x (parallel resistance) above the keypad to calculate; it lights up blue, and so do the number keys. Tap values to drop them in, and keep tapping to add more. Tap the answer to place it. If every value came from one card, it fills that card's empty box. Otherwise it becomes a note. Or tap any empty box to drop the answer straight into it, or tap open space to drop it into a new note there. Tap the lit operation again to go back to typing in boxes, and Clear to start over.</dd>
         <dt><span class="chip">Notes</span></dt><dd>Tap any empty spot to jot down a value, like a combined resistance. Tag it V, A, or Ω, or delete it. Drag the top strip to move a note, or drag its number to copy it into a box or the calculator.</dd>
-        <dt><span class="chip">Zoom</span></dt><dd>Pinch the circuit with two fingers to zoom in or out, and swipe to look around. In Expert, swipe on a card, since dragging open space draws a group. On a laptop, pinch the trackpad.</dd>
+        <dt><span class="chip">Zoom</span></dt><dd>Pinch the circuit with two fingers to zoom in or out, and swipe to look around. On a laptop, pinch the trackpad.</dd>
         <dt><span class="chip">Drag</span></dt><dd>Drag any value onto a box or a calculator slot to copy it there.</dd>
         <dt><span class="chip">Meter</span></dt><dd>Measures one box for you. You get 3 per puzzle.</dd>
-        <dt><span class="chip">Groups</span></dt><dd>In Expert puzzles, drag a box around two or more resistors to group them. The group gets a dashed outline and its own card for its voltage, current, and combined resistance. Group boxes are for your working: they aren't checked, and you don't need them to win. Tap × on the card to remove a group.</dd>
+        <dt><span class="chip">Groups</span></dt><dd>In Expert puzzles, tap <b>Group</b>, tap two or more resistors, then tap <b>Group</b> again to group them. The group gets a dashed outline and its own card for its voltage, current, and combined resistance. Group boxes are for your working: they aren't checked, and you don't need them to win. Tap × on the card to remove a group.</dd>
       </dl>
       <h4>Puzzles</h4>
       <p>Easy uses whole numbers, Medium one decimal place, and Hard two. Classic gives you the battery voltage and every resistance. Mixed gives you any mix of values. Meter puzzles start with too few clues, so you measure the fewest boxes you can and try to match par.</p>
@@ -769,7 +773,7 @@ function showHome() {
   if (pr.s) $('#ps' + pr.s).checked = true;
   styleNote();
 }
-const styleNote = () => { $('#styleNote').textContent = NOTE[practice().s] + (practice().d === 'X' ? ' Expert circuits nest groups four deep. Drag a box around resistors to group them and work out each group’s values.' : ''); };
+const styleNote = () => { $('#styleNote').textContent = NOTE[practice().s] + (practice().d === 'X' ? ' Expert circuits nest groups four deep. Tap Group, pick resistors, and tap Group again to group them and work out each group’s values.' : ''); };
 const practice = () => ({ d: $('[name=pd]:checked').value, s: $('[name=ps]:checked').value });
 $('#home').addEventListener('change', e => {
   if (e.target.name !== 'pd' && e.target.name !== 'ps') return;
@@ -813,7 +817,7 @@ function openGame(code) {
   $('#gTitle').textContent = daily ? `Daily ${DIFF[P.diff]}` : `${DIFF[P.diff]} · ${STYLE[P.style]}`;
   $('#gSub').textContent = daily ? `${STYLE[P.style]} · ${P.code}` : P.code;
   drawCircuit(); zoom = 1;
-  $('#svg').classList.toggle('expert', P.diff === 'X');
+  $('#pad').classList.toggle('expert', P.diff === 'X'); picks = [];
   $('#home').hidden = true; $('#rush').hidden = true; $('#game').hidden = false;
   $('#svg').classList.toggle('live', S.solved);
   paint();
@@ -901,7 +905,7 @@ let base; // the drawn circuit: size, card rectangles, card centers
 function drawCircuit() {
   base = circuitSvg(P.tree);
   const svg = $('#svg');
-  svg.innerHTML = '<rect id="bgHit"/><g id="gOut"></g>' + base.html + '<g id="groups"></g><g id="notes"></g><rect id="lasso" rx="10"/>';
+  svg.innerHTML = '<rect id="bgHit"/><g id="gOut"></g>' + base.html + '<g id="groups"></g><g id="notes"></g>';
 }
 
 /* ---------- Notes ---------- */
@@ -940,7 +944,7 @@ function addNote(ax, ay, props) {
   return n;
 }
 /* ---------- Groups (Expert) ---------- */
-// Drag a box around resistors to group them. A group gets a card for its V, I,
+// Tap Group, pick resistors, and tap Group again to group them. A group gets a card for its V, I,
 // and R, for your own working: those boxes aren't checked and aren't needed to win.
 const groupName = parts => {
   const n = parts.map(p => +p.slice(1)).sort((a, b) => a - b);
@@ -956,7 +960,7 @@ function outline(g) { // the members' cards, padded a little more for each group
   return { x, y, w: Math.max(...rs.map(r => r.x)) + CW / 2 + pad - x, h: Math.max(...rs.map(r => r.y)) + CH / 2 + pad - y };
 }
 function addGroup(parts) {
-  if (parts.length < 2) return toast('Box at least two resistors to group them');
+  if (parts.length < 2) { toast('Pick at least two resistors to group them'); return paint(); }
   const key = [...parts].sort().join();
   let g = S.groups.find(h => [...h.parts].sort().join() === key);
   if (!g) {
@@ -968,6 +972,14 @@ function addGroup(parts) {
   }
   if (mode === 'calc') C.target = null; else { mode = 'input'; setSel(`${g.name}.R`); }
   buzz(8); save(); paint();
+}
+// Group key: first press starts picking resistors, second press groups them.
+let picks = [];
+function groupKey() {
+  if (mode !== 'group') { mode = 'group'; picks = []; return paint(); }
+  const ps = picks;
+  mode = 'input'; picks = [];
+  if (ps.length) addGroup(ps); else paint();
 }
 function ungroup(name) {
   S.groups = S.groups.filter(g => g.name !== name);
@@ -1109,6 +1121,7 @@ function paint() {
   const st = $('#stText');
   if (S.solved) st.innerHTML = '<b>Solved.</b> Current is flowing.';
   else if (mode === 'meter') st.innerHTML = '<b>Meter:</b> tap a box to measure it';
+  else if (mode === 'group') st.innerHTML = '<span class="where grp">Group</span>' + (picks.length < 2 ? 'Tap resistors to pick them' : `<b>${groupName(picks)}</b>: tap Group to make it`);
   else if (mode === 'calc') {
     const d = dest(calcResult());
     st.innerHTML = '<span class="where calc">Calc</span>' + (!C.slots.some(s => s.t) ? OPS[C.op].hint
@@ -1122,6 +1135,10 @@ function paint() {
   $('#mLeft').textContent = meterLeft();
   const pk = k => $(`[data-k="${k}"]`);
   pk('meter').setAttribute('aria-pressed', mode === 'meter');
+  pk('group').setAttribute('aria-pressed', mode === 'group');
+  pk('group').disabled = S.solved;
+  svg.classList.toggle('grouping', mode === 'group');
+  for (const g of svg.querySelectorAll('.card[data-part]')) g.classList.toggle('pick', mode === 'group' && picks.includes(g.dataset.part));
   pk('meter').disabled = S.solved || meterLeft() <= 0;
   pk('.').disabled = mode !== 'calc' && P.dp === 0 && !isNote(sel);
   $('#panel').classList.toggle('calcing', mode === 'calc');
@@ -1165,6 +1182,8 @@ function key(k) {
   if (k === 'esc') { mode = 'input'; return paint(); }
   if (S.solved) return;
   if (k === 'meter') { mode = mode === 'meter' ? 'input' : 'meter'; return paint(); }
+  if (k === 'group') return groupKey();
+  if (mode === 'group') { mode = 'input'; picks = []; }
   if (k === 'clear') return clearKey();
   if (mode === 'calc') return calcKey(k);
   if (mode === 'meter') mode = 'input';
@@ -1379,16 +1398,6 @@ function dropTarget(x, y) {
 const svgPoint = e => new DOMPoint(e.clientX, e.clientY).matrixTransform($('#svg').getScreenCTM().inverse());
 function endDrag(drop) {
   if (!drag) return;
-  if (drag.box) {
-    const { on, r: b } = drag;
-    drag = null;
-    $('#lasso').classList.remove('on');
-    if (!on) return;
-    noClick = true;
-    // Every resistor whose card center is inside the box joins the group.
-    if (drop) addGroup(Object.keys(base.at).filter(p => p !== 'B' && base.at[p].x > b.x && base.at[p].x < b.x + b.w && base.at[p].y > b.y && base.at[p].y < b.y + b.h));
-    return;
-  }
   if (drag.move) { const on = drag.on; drag = null; if (on) { noClick = true; save(); paint(); } return; }
   const { v, on, over } = drag;
   drag = null;
@@ -1421,24 +1430,11 @@ addEventListener('pointerdown', e => {
     drag = { move: n, dx: p.x - n.x, dy: p.y - n.y, x: e.clientX, y: e.clientY, on: false };
     return;
   }
-  if (e.target.id === 'bgHit' && P.diff === 'X' && mode !== 'meter') {
-    drag = { box: svgPoint(e), x: e.clientX, y: e.clientY, on: false };
-    return;
-  }
   const v = dragSource(e.target);
   if (v) drag = { v, x: e.clientX, y: e.clientY, on: false, over: null };
 });
 addEventListener('pointermove', e => {
   if (!drag || !e.isPrimary) return;
-  if (drag.box) { // Expert: stretch a box from where you pressed
-    if (!drag.on && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
-    drag.on = true;
-    const a = drag.box, b = svgPoint(e), l = $('#lasso');
-    drag.r = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
-    Object.entries({ x: drag.r.x, y: drag.r.y, width: drag.r.w, height: drag.r.h }).forEach(([k, v]) => l.setAttribute(k, v));
-    l.classList.add('on');
-    return;
-  }
   if (drag.move) { // move the note itself
     if (!drag.on && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
     drag.on = true;
@@ -1472,7 +1468,10 @@ addEventListener('click', e => { if (noClick) { noClick = false; e.stopPropagati
 
 $('#board').addEventListener('click', e => {
   const g = e.target.closest('.cell[data-id]'), nt = e.target.closest('.note'), ug = e.target.closest('[data-ungroup]');
+  const pc = mode === 'group' && e.target.closest('.card[data-part^="R"]');
   if (ug) { if (!S.solved) ungroup(ug.dataset.ungroup); }
+  else if (pc) { const p = pc.dataset.part; picks = picks.includes(p) ? picks.filter(x => x !== p) : [...picks, p]; paint(); }
+  else if (mode === 'group') return;
   else if (g) tapCell(g.dataset.id);
   else if (nt) tapNote(nt.dataset.note);
   else if (!e.target.closest('.card')) tapEmpty(e);
