@@ -105,10 +105,10 @@ button:disabled { cursor: default; opacity: .4; }
 .rans { font: 700 32px var(--num); text-align: center; min-height: 1.2em; }
 .tols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .tols button { height: 40px; border: 2px solid var(--edge); background: var(--card); border-radius: 8px; font: 600 16px var(--num); display: flex; align-items: center; justify-content: center; gap: 6px; }
-.tols button i { width: 10px; height: 22px; border-radius: 2px; }
 .tols [aria-pressed="true"] { border-color: var(--ink); background: var(--sel); }
-.tols button i:only-child { width: 60%; }
-#rPad .sw { border: 2px solid var(--muted); }
+/* A colored key: the whole key is the color, its label stays where it was. */
+.sw { border: 2px solid rgb(0 0 0 / .3) !important; }
+.tols .sw[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 2px; }
 #rPad .enter { grid-column: span 2; background: var(--ink); color: var(--bg); font: 600 17px var(--display); }
 #rPad .wide3 { grid-column: span 3; }
 .rcard { overflow-y: auto; min-height: 0; }
@@ -154,8 +154,7 @@ button:disabled { cursor: default; opacity: .4; }
 .peek.locked { background: var(--sel); }
 .peek.locked .keep { opacity: 0; }
 .peek.locked .kept { opacity: 1; }
-#rPad .sw { font: 700 17px var(--num); }
-#rPad .dot { display: inline-block; width: 16px; height: 22px; border-radius: 4px; margin-right: 8px; vertical-align: -3px; border: 1px solid rgb(0 0 0 / .35); }
+#rPad .sw[data-r^="c"], #cPad .sw { font: 700 17px var(--num); } /* color keys with small labels like ×0.1 */
 #rushLearn { align-content: start; }
 #rushLearn .rq { margin: 0; }
 .seg.two { grid-template-columns: 1fr 1fr; }
@@ -1647,22 +1646,24 @@ function walkthrough(q) {
 // reading. Holding Peek fills in the other half: numbers on the color buttons,
 // or labels under the bands you're reading.
 const hints = () => R && R.peekHold;
+// Inline style that paints a whole key in a band color, with readable text on it.
+const swatch = c => ` style="background:${c};color:${lightText(c) ? '#fff' : '#111'}"`;
 const lightText = c => ['#1a1a1a', '#7a4a1e', '#d7261e', '#2f5fd0', '#8a3fc2', '#8c8c8c'].includes(c);
 function rushTols(mode) {
   const color = mode === 'build' || hints(), pct = mode === 'read' || hints();
-  $('#rTols').innerHTML = [1, 2, 5, 10].map(t => `<button data-tol="${t}" aria-label="${pct ? `±${t}%` : colorName(TOL[t])}">` +
-    (color ? `<i style="background:${TOL[t]}"></i>` : '') + (pct ? `±${t}%` : '') + '</button>').join('');
+  $('#rTols').innerHTML = [1, 2, 5, 10].map(t => `<button data-tol="${t}"${color ? ' class="sw"' + swatch(TOL[t]) : ''} aria-label="${pct ? `±${t}%` : colorName(TOL[t])}">` +
+    (pct ? `±${t}%` : '') + '</button>').join('');
 }
 function rushPad(mode) {
   rushTols(mode);
   const pad = $('#rPad');
   if (mode === 'read') {
     pad.innerHTML = ['7', '8', '9', 'back', '4', '5', '6', 'k', '1', '2', '3', 'M', '.', '0', 'enter']
-      .map(k => `<button data-r="${k}"${k === 'enter' ? ' class="enter"' : ''}${k === 'back' ? ' aria-label="Delete"' : ''}>` +
-        (hints() && /\d/.test(k) ? `<i class="dot" style="background:${BAND[k]}"></i>` : '') + // Peek: each digit's color
+      .map(k => `<button data-r="${k}"${k === 'enter' ? ' class="enter"' : ''}${k === 'back' ? ' aria-label="Delete"' : ''}` +
+        (hints() && /\d/.test(k) ? ' class="sw"' + swatch(BAND[k]) : '') + '>' + // Peek: each digit key takes its color
         `${k === 'back' ? '⌫' : k === 'enter' ? 'Enter' : k}</button>`).join('');
   } else {
-    const sw = (k, c, name, num) => `<button class="sw" data-r="${k}" aria-label="${name}" style="background:${c};color:${lightText(c) ? '#fff' : '#111'}">${hints() ? num : ''}</button>`;
+    const sw = (k, c, name, num) => `<button class="sw" data-r="${k}" aria-label="${name}"${swatch(c)}>${hints() ? num : ''}</button>`;
     pad.innerHTML = BAND.map((c, d) => sw('c' + d, c, COLOR_NAMES[d], d)).join('') + sw('cg', GOLD, 'gold', '×0.1') + sw('cs', SILVER, 'silver', '×0.01') +
       '<button data-r="back" aria-label="Delete">⌫</button><button data-r="enter" class="enter">Enter</button>';
   }
@@ -1906,10 +1907,10 @@ function checkerPaint() {
   $('#cNote').textContent = note;
 }
 function showChecker() {
-  const sw = (k, c, name, num) => `<button class="sw" data-c="${k}" aria-label="${name}" style="background:${c};color:${lightText(c) ? '#fff' : '#111'}">${num}</button>`;
+  const sw = (k, c, name, num) => `<button class="sw" data-c="${k}" aria-label="${name}"${swatch(c)}>${num}</button>`;
   $('#cPad').innerHTML = BAND.map((c, d) => sw(d, c, COLOR_NAMES[d], d)).join('') + sw('g', GOLD, 'gold', '×0.1') + sw('s', SILVER, 'silver', '×0.01') +
     '<button class="ctl" data-c="back" aria-label="Delete">⌫</button><button class="ctl" data-c="clear">Clear</button>';
-  $('#cTols').innerHTML = [0, 1, 2, 5, 10].map(t => `<button data-t="${t}">${t ? `<i style="background:${TOL[t]}"></i>±${t}%` : 'None'}</button>`).join('');
+  $('#cTols').innerHTML = [0, 1, 2, 5, 10].map(t => `<button data-t="${t}"${t ? ' class="sw"' + swatch(TOL[t]) : ''}>${t ? `±${t}%` : 'None'}</button>`).join('');
   checkerPaint();
   rushShow('Check');
 }
