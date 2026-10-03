@@ -434,6 +434,8 @@ dialog h3 { font: 700 26px/1.1 var(--display); margin: 0 0 12px; text-wrap: bala
 dialog p, dialog li { font-size: 15px; }
 dialog ul { padding-left: 20px; display: grid; gap: 6px; }
 dialog .rule { font: 600 16px var(--num); letter-spacing: .02em; }
+#win { position: relative; }
+.dclose { position: absolute; top: 8px; right: 8px; }
 .dact { display: grid; gap: 8px; margin-top: 18px; }
 .dact .ghost { background: none; border: 2px solid var(--ink); border-radius: 10px; padding: 12px; font-weight: 600; }
 .opt { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 0; border-bottom: 1px solid var(--edge); }
@@ -830,6 +832,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
 </dialog>
 
 <dialog id="win">
+  <button class="icon dclose" id="winX" aria-label="Close and view the puzzle"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <h3>Circuit complete</h3>
   <p id="winStat"></p>
   <p id="winText"></p>
@@ -838,6 +841,7 @@ svg.demo { display: block; width: 100%; height: auto; margin: 0 auto; }
     <button class="primary" id="winShare">Share this puzzle</button>
     <button class="primary" id="winGo"></button>
     <button class="ghost" id="winNext">New puzzle</button>
+    <button class="ghost" id="winView">View puzzle</button>
     <button class="ghost" id="winHome">Home</button>
   </div>
 </dialog>
@@ -1133,6 +1137,7 @@ function noteKey(k) {
   n.t = t; save(); paint();
 }
 $('#status').onclick = e => {
+  if (e.target.closest('[data-results]')) return showResults();
   const n = isNote(sel) && note(sel), u = e.target.closest('[data-nu]');
   if (!n) return;
   if (u) n.u = n.u === u.dataset.nu ? '' : u.dataset.nu;
@@ -1230,7 +1235,7 @@ function paint() {
     g.classList.toggle('known', !!r && (r.given || !!S.meas[r.id] || S.solved));
   }
   const st = $('#stText');
-  if (S.solved) st.innerHTML = '<b>Solved.</b> Current is flowing.';
+  if (S.solved) st.innerHTML = '<b>Solved.</b> Current is flowing. <button class="linkish" data-results>See results</button>';
   else if (mode === 'meter') st.innerHTML = '<b>Meter:</b> tap a box to measure it';
   else if (mode === 'group') st.innerHTML = '<span class="where grp">Group</span>' + (picks.length < 2 ? 'Tap resistors to pick them' : `<b>${groupName(picks)}</b>: tap Group to make it`);
   else if (mode === 'calc') {
@@ -1333,6 +1338,10 @@ function win() {
   save(); paint();
   $('#svg').classList.add('live');
   buzz([15, 60, 30]);
+  setTimeout(showResults, 1500);
+}
+// The results card; also reopened from "See results" on a solved puzzle.
+function showResults() {
   const n = S.used, s = n === 1 ? '' : 's';
   if (P.style === 'P') {
     const over = n - P.par;
@@ -1349,7 +1358,7 @@ function win() {
   $('#winGo').classList.toggle('rush', !next);
   $('#winNext').textContent = `New ${DIFF[P.diff]} ${STYLE[P.style]} puzzle`;
   $('#winNext').hidden = P.code === O.dailyCode(today(), P.diff);
-  setTimeout(() => $('#win').showModal(), 1500);
+  if (!$('#game').hidden && !$('#win').open) $('#win').showModal();
 }
 
 /* ---------- Calculator ---------- */
@@ -1672,6 +1681,7 @@ async function share() {
 }
 $('#shareBtn').onclick = share;
 $('#winShare').onclick = share;
+$('#winView').onclick = $('#winX').onclick = () => $('#win').close();
 $('#winHome').onclick = () => { $('#win').close(); location.hash = ''; };
 let winGo = '';
 $('#winGo').onclick = () => { $('#win').close(); location.hash = winGo; };
